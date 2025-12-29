@@ -1,0 +1,142 @@
+import { useEffect, useState } from "react";
+import { loadGuestUser, saveGuestUser } from "../lib/auth";
+
+export default function RequireGuest() {
+  const [user, setUser] = useState(() => loadGuestUser());
+  const [nickname, setNickname] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  // 이미 로컬에 유저 있으면 닉네임 초기값 세팅
+  useEffect(() => {
+    if (user?.nickname) setNickname(user.nickname);
+  }, [user]);
+
+  if (user?.id) return null; // 유저 있으면 아무것도 안 띄움
+
+  const submit = async () => {
+    const name = nickname.trim();
+
+    if (!name) {
+      setErr("닉네임을 입력해주세요!");
+      return;
+    }
+
+    if (name.length > 30) {
+      setErr("닉네임은 30자 이내로 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
+    setErr("");
+
+    try {
+      const res = await fetch("/api/users/guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: name }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "guest create failed");
+      }
+
+      const data = await res.json();
+      const saved = { id: String(data.id), nickname: data.nickname };
+
+      saveGuestUser(saved);
+      setUser(saved);
+    } catch (e) {
+      setErr("서버 연결/요청에 실패했습니다. 서버가 켜져 있는지 확인해주세요");
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.backdrop}>
+      <div style={styles.modal}>
+        <h2 style={{ margin: 0, fontSize: 20 }}>닉네임 설정</h2>
+        <p style={{ marginTop: 8, color: "#555", lineHeight: 1.4 }}>
+          처음 한 번만 입력하면 돼. 나중에 마이페이지에서 바꿀 수도 있어!
+        </p>
+
+        <input
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="예: 골유뺌"
+          style={styles.input}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !loading) submit();
+          }}
+          disabled={loading}
+          autoFocus
+        />
+
+        {err && <div style={styles.error}>{err}</div>}
+
+        <button onClick={submit} style={styles.button} disabled={loading}>
+          {loading ? "생성 중..." : "시작하기"}
+        </button>
+
+        <div style={{ marginTop: 10, fontSize: 12, color: "#777" }}>
+          * 지금은 게스트 모드야(1주차 MVP). 2주차에 로그인 추가 가능!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.35)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    padding: 16,
+  },
+
+  modal: {
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 16,
+    background: "#fff",
+    padding: 18,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  },
+
+  input: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "1px solid #ddd",
+    outline: "none",
+    fontSize: 16,
+    marginTop: 10,
+  },
+
+  button: {
+    width: "100%",
+    marginTop: 12,
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  error: {
+    marginTop: 10,
+    color: "crimson",
+    fontSize: 13,
+  },
+};

@@ -1,0 +1,40 @@
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* 앱은 라이트 고정 (원하면 나중에 다크 추가) */
+  color: #111;
+  background: #fafafa;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #fafafa;
+  display: flex;
+  justify-content: center;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  width: min(92vw, 720px); /* PC에서는 720까지 커지고 */
+  min-height: 100vh;
+  background: #fff;
+}
