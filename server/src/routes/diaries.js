@@ -18,6 +18,9 @@ router.post("/", async (req, res) => {
       venue_name,
       one_liner,
       visibility,
+      result,
+      score_home,
+      score_away,
     } = req.body;
 
     // 필수값 체크
@@ -34,33 +37,53 @@ router.post("/", async (req, res) => {
     if (!["baseball", "volleyball"].includes(sport)) {
       return res.status(400).json({ message: "sport invalid" });
     }
-    if (one_liner.length > 120) {
+    if (String(one_liner).length > 120) {
       return res.status(400).json({ message: "one_liner too long (<=120)" });
+    }
+
+    // result 기본값 처리
+    const safeResult = result ?? "unknown";
+
+    // 점수는 숫자거나 null만 허용
+    const safeScoreHome =
+      score_home === "" || score_home === undefined ? null : Number(score_home);
+    const safeScoreAway =
+      score_away === "" || score_away === undefined ? null : Number(score_away);
+
+    if (safeScoreHome !== null && Number.isNaN(safeScoreHome)) {
+      return res.status(400).json({ message: "score_home must be number" });
+    }
+    if (safeScoreAway !== null && Number.isNaN(safeScoreAway)) {
+      return res.status(400).json({ message: "score_away must be number" });
     }
 
     const vis = visibility ?? "private";
 
-    const result = await pool.query(
+    const { rows } = await pool.query(
       `
       INSERT INTO diaries
-        (user_id, sport, team_home, team_away, game_date, venue_name, one_liner, visibility)
+        (user_id, sport, team_home, team_away, game_date, venue_name, one_liner, visibility, result, score_home, score_away)
       VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8)
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
       `,
       [
-        String(user_id),
+        Number(user_id),
         sport,
         team_home,
         team_away ?? null,
-        game_date,
+        game_date, // 'YYYY-MM-DD' 형태면 OK
         venue_name,
         one_liner,
         vis,
+
+        safeResult,
+        safeScoreHome,
+        safeScoreAway,
       ]
     );
 
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json(rows[0]);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
@@ -79,7 +102,7 @@ router.get("/", async (req, res) => {
     const values = [];
 
     if (userId) {
-      values.push(userId);
+      values.push(Number(userId));
       conditions.push(`user_id = $${values.length}`);
     }
     if (sport) {
@@ -93,7 +116,7 @@ router.get("/", async (req, res) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const result = await pool.query(
+    const { rows } = await pool.query(
       `
       SELECT *
       FROM diaries
@@ -103,7 +126,7 @@ router.get("/", async (req, res) => {
       values
     );
 
-    return res.json(result.rows);
+    return res.json(rows);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
@@ -117,11 +140,12 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const result = await pool.query("SELECT * FROM diaries WHERE id=$1", [id]);
+    const { rows } = await pool.query("SELECT * FROM diaries WHERE id=$1", [
+      id,
+    ]);
 
-    if (!result.rows.length)
-      return res.status(404).json({ message: "not found" });
-    return res.json(result.rows[0]);
+    if (!rows.length) return res.status(404).json({ message: "not found" });
+    return res.json(rows[0]);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
@@ -132,72 +156,11 @@ router.get("/:id", async (req, res) => {
  * PUT /api/diaries/:id
  * 수정
  */
-// router.put("/:id", async (req, res) => {
-//   try {
-//     const id = Number(req.params.id);
-//     const {
-//       sport,
-//       team_home,
-//       team_away,
-//       game_date,
-//       venue_name,
-//       one_liner,
-//       visibility,
-//     } = req.body;
-
-//     if (!id) return res.status(400).json({ error: "invalid id" });
-
-//     // 최소 검증
-//     if (!sport || !team_home || !game_date || !venue_name || !one_liner) {
-//       return res.status(400).json({ error: "missing fields" });
-//     }
-
-//     const result = await pool.query(
-//       `
-//       UPDATE diaries SET
-//         team_home = $1,
-//         team_away = $2,
-//         game_date = $3,
-//         venue_name = $4,
-//         one_liner = $5,
-//         visibility = $6,
-//         updated_at = now()
-//       WHERE id = $7
-//       RETURNING *
-//       `,
-//       [
-//         team_home,
-//         team_away ?? null,
-//         game_date,
-//         venue_name,
-//         one_liner,
-//         visibility ?? "private",
-//         id,
-//       ]
-//     );
-
-//     const params = [
-//       sport,
-//       team_home,
-//       team_away ?? null,
-//       game_date,
-//       venue_name,
-//       one_liner,
-//       visibility ?? null,
-//       id,
-//     ];
-
-//     const { rows } = await req.db.query(result, params);
-//     if (!rows.length) return res.status(404).json({ error: "not found" });
-//     res.json(rows[0]);
-//   } catch (e) {
-//     console.error(e);
-//     res.status(500).send(String(e));
-//   }
-// });
 router.put("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "invalid id" });
+
     const {
       sport,
       team_home,
@@ -206,15 +169,32 @@ router.put("/:id", async (req, res) => {
       venue_name,
       one_liner,
       visibility,
+      result,
+      score_home,
+      score_away,
     } = req.body;
 
-    if (!id) return res.status(400).json({ error: "invalid id" });
-
+    // 최소 검증
     if (!sport || !team_home || !game_date || !venue_name || !one_liner) {
       return res.status(400).json({ error: "missing fields" });
     }
 
-    const result = await pool.query(
+    const safeResult = result ?? "unknown";
+    const safeScoreHome =
+      score_home === "" || score_home === undefined ? null : Number(score_home);
+    const safeScoreAway =
+      score_away === "" || score_away === undefined ? null : Number(score_away);
+
+    if (safeScoreHome !== null && Number.isNaN(safeScoreHome)) {
+      return res.status(400).json({ message: "score_home must be number" });
+    }
+    if (safeScoreAway !== null && Number.isNaN(safeScoreAway)) {
+      return res.status(400).json({ message: "score_away must be number" });
+    }
+
+    const vis = visibility ?? "private";
+
+    const { rows } = await pool.query(
       `
       UPDATE diaries SET
         sport = $1,
@@ -224,8 +204,11 @@ router.put("/:id", async (req, res) => {
         venue_name = $5,
         one_liner = $6,
         visibility = $7,
+        result = $8,
+        score_home = $9,
+        score_away = $10,
         updated_at = now()
-      WHERE id = $8
+      WHERE id = $11
       RETURNING *
       `,
       [
@@ -235,43 +218,41 @@ router.put("/:id", async (req, res) => {
         game_date,
         venue_name,
         one_liner,
-        visibility ?? "private",
+        vis,
+        safeResult,
+        safeScoreHome,
+        safeScoreAway,
         id,
       ]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "not found" });
-    }
-
-    return res.json(result.rows[0]);
-  } catch (e) {
-    console.error(e);
+    if (!rows.length) return res.status(404).json({ error: "not found" });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ message: "internal server error" });
   }
 });
 
 /**
  * DELETE /api/diaries/:id
+ * 삭제
  */
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "invalid id" });
 
-    const result = await pool.query(
+    const { rows, rowCount } = await pool.query(
       "DELETE FROM diaries WHERE id = $1 RETURNING id",
       [id]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "not found" });
-    }
-
-    return res.json({ ok: true, id: String(result.rows[0].id) });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "delete failed" });
+    if (rowCount === 0) return res.status(404).json({ error: "not found" });
+    return res.json({ ok: true, id: String(rows[0].id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "internal server error" });
   }
 });
 

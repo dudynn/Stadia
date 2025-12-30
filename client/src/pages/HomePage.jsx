@@ -98,6 +98,21 @@ function DiaryCard({ d, onClick }) {
         <VsBlock left={d.team_home} right={d.team_away} />
       </div>
 
+      {/* 경기 결과 */}
+      {d.result !== "unknown" && (
+        <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800 }}>
+          {d.result === "win" && "승"}
+          {d.result === "lose" && "패"}
+          {d.result === "draw" && "무"}
+          {d.score_home != null && d.score_away != null && (
+            <>
+              {" "}
+              · {d.score_home}:{d.score_away}
+            </>
+          )}
+        </div>
+      )}
+
       {/* 하단 장소/소감 */}
       <div
         style={{ marginTop: 12, color: "#666", fontSize: 13, fontWeight: 700 }}

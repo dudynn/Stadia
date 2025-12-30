@@ -25,11 +25,20 @@ function todayYYYYMMDD() {
 
 function toYYYYMMDD(dateLike) {
   if (!dateLike) return "";
-  // game_date가 '2025-12-25' 처럼 오면 그대로 쓰고,
-  // '2025-12-25T...' 처럼 오면 앞 10자리만 잘라도 됨
+
   const s = String(dateLike);
+
+  // 이미 YYYY-MM-DD면 그대로 (이건 안전)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  return s.slice(0, 10);
+
+  // ISO(…Z / …+09:00 등)면 "slice" 하지 말고 Date로 파싱해서 로컬 날짜로 조립
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return ""; // 파싱 실패 방어
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 const segBtn = (active) => ({
@@ -69,6 +78,11 @@ export default function WritePage() {
   // 장소: 목록/직접 입력 모드
   const [stadiumMode, setStadiumMode] = useState("select"); // "select" | "custom"
   const [stadiumSelect, setStadiumSelect] = useState("");
+
+  // 경기 결과
+  const [result, setResult] = useState("unknown");
+  const [scoreHome, setScoreHome] = useState("");
+  const [scoreAway, setScoreAway] = useState("");
 
   // 배구 팀 목록
   const vTeams = vGender === "male" ? V_LEAGUE_MEN : V_LEAGUE_WOMEN;
@@ -125,6 +139,11 @@ export default function WritePage() {
           setVHome(d.team_home);
           setVAway(d.team_away ?? d.team_home);
         }
+
+        // 경기 결과
+        setResult(d.result ?? "unknown");
+        setScoreHome(d.score_home ?? "");
+        setScoreAway(d.score_away ?? "");
 
         // 장소 값 먼저 넣고,
         const v = d.venue_name ?? "";
@@ -187,6 +206,9 @@ export default function WritePage() {
         venue_name: venueName.trim(),
         one_liner: oneLiner.trim(),
         visibility: "private",
+        result,
+        score_home: scoreHome === "" ? null : Number(scoreHome),
+        score_away: scoreAway === "" ? null : Number(scoreAway),
       };
 
       if (isEdit) {
@@ -333,6 +355,57 @@ export default function WritePage() {
           onChange={(e) => setGameDate(e.target.value)}
           style={styles.input}
         />
+      </div>
+
+      {/* 경기 결과 */}
+      <div style={{ marginTop: 14 }}>
+        <label style={styles.label}>경기 결과</label>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          {["win", "lose", "draw", "unknown"].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setResult(r)}
+              style={{
+                flex: 1,
+                padding: "10px",
+                borderRadius: 10,
+                border: result === r ? "none" : "1px solid #ddd",
+                background: result === r ? "#111" : "#fff",
+                color: result === r ? "#fff" : "#111",
+                fontWeight: 800,
+              }}
+            >
+              {r === "win" && "승"}
+              {r === "lose" && "패"}
+              {r === "draw" && "무"}
+              {r === "unknown" && "모름"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <label style={styles.label}>스코어</label>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            type="number"
+            value={scoreHome}
+            onChange={(e) => setScoreHome(e.target.value)}
+            placeholder="HOME"
+            style={styles.input}
+          />
+
+          <input
+            type="number"
+            value={scoreAway}
+            onChange={(e) => setScoreAway(e.target.value)}
+            placeholder="AWAY"
+            style={styles.input}
+          />
+        </div>
       </div>
 
       {/* 장소: 목록/직접입력 */}

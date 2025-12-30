@@ -93,6 +93,21 @@ export default function DiaryDetailPage() {
               {data.team_away}
             </>
           ) : null}
+
+          {/* 경기 결과 */}
+          {data.result !== "unknown" && (
+            <div style={{ marginTop: 10, fontSize: 14, fontWeight: 900 }}>
+              결과: {data.result === "win" && "승"}
+              {data.result === "lose" && "패"}
+              {data.result === "draw" && "무"}
+              {data.score_home !== null && data.score_away !== null && (
+                <>
+                  {" "}
+                  · {data.score_home} : {data.score_away}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 8, color: "#666" }}>
