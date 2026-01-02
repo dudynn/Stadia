@@ -25,6 +25,9 @@ export default function DiaryDetailPage() {
 
   const [photos, setPhotos] = useState([]);
 
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerSrc, setViewerSrc] = useState("");
+
   useEffect(() => {
     let alive = true;
 
@@ -46,6 +49,20 @@ export default function DiaryDetailPage() {
       alive = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!viewerOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setViewerOpen(false);
+        setViewerSrc("");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [viewerOpen]);
 
   useEffect(() => {
     let alive = true;
@@ -136,11 +153,16 @@ export default function DiaryDetailPage() {
                     key={p.id}
                     src={encodeURI(p.url)}
                     alt=""
+                    onClick={() => {
+                      setViewerSrc(encodeURI(p.url));
+                      setViewerOpen(true);
+                    }}
                     style={{
                       width: 120,
                       height: 120,
                       objectFit: "cover",
                       borderRadius: 14,
+                      cursor: "zoom-in",
                     }}
                   />
                 ))}
@@ -176,6 +198,61 @@ export default function DiaryDetailPage() {
           {deleting ? "삭제 중..." : "삭제"}
         </button>
       </div>
+
+      {viewerOpen && (
+        <div
+          onClick={() => {
+            setViewerOpen(false);
+            setViewerSrc("");
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 9999,
+          }}
+        >
+          <img
+            src={viewerSrc}
+            alt=""
+            onClick={(e) => e.stopPropagation()} // 이미지 클릭은 닫히지 않게
+            style={{
+              maxWidth: "95vw",
+              maxHeight: "85vh",
+              objectFit: "contain",
+              borderRadius: 14,
+              background: "#000",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewerOpen(false);
+              setViewerSrc("");
+            }}
+            style={{
+              position: "fixed",
+              top: 14,
+              right: 14,
+              border: "none",
+              borderRadius: 999,
+              padding: "10px 12px",
+              fontWeight: 900,
+              background: "rgba(255,255,255,0.15)",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </PageContainer>
   );
 }

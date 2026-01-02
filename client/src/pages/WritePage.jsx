@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createDiary, fetchDiaryById, updateDiary } from "../lib/api.js";
 import PageContainer from "../components/PageContainer.jsx";
-import { uploadDiaryPhotos } from "../lib/api.js";
+
+import {
+  createDiary,
+  fetchDiaryById,
+  updateDiary,
+  fetchDiaryPhotos,
+  deleteDiaryPhoto,
+  uploadDiaryPhotos,
+} from "../lib/api.js";
 
 import {
   BASEBALL_TEAMS,
@@ -85,9 +92,10 @@ export default function WritePage() {
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
 
-  // 사진 추가
-  const [photos, setPhotos] = useState([]);
-  const [photoPreviews, setPhotoPreviews] = useState([]);
+  // 사진
+  const [existingPhotos, setExistingPhotos] = useState([]); // [{id, url, ...}]
+  const [newFiles, setNewFiles] = useState([]); // File[]
+  const [newPreviews, setNewPreviews] = useState([]); // string[]
 
   // 배구 팀 목록
   const vTeams = vGender === "male" ? V_LEAGUE_MEN : V_LEAGUE_WOMEN;
@@ -114,6 +122,32 @@ export default function WritePage() {
     setStadiumSelect(first);
     setVenueName(first);
   }, [stadiumList, isEdit]);
+
+  // 수정 모드: 기존 사진 불러오기
+  useEffect(() => {
+    if (!isEdit) return;
+
+    let alive = true;
+    (async () => {
+      try {
+        const list = await fetchDiaryPhotos(id);
+        if (alive) setExistingPhotos(list);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [isEdit, id]);
+
+  // 메모리 누수 방지 (previews cleanup)
+  useEffect(() => {
+    return () => {
+      newPreviews.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [newPreviews]);
 
   // 수정 모드: 기존 기록 불러와서 state 채우기 + 장소 모드 자동 판단
   useEffect(() => {
@@ -185,6 +219,21 @@ export default function WritePage() {
     };
   }, [sport, baseballHome, baseballAway, vHome, vAway]);
 
+  const uploadIfAny = async (diaryId) => {
+    if (!newFiles.length) return;
+
+    const fd = new FormData();
+    newFiles.forEach((f) => fd.append("photos", f));
+
+    await uploadDiaryPhotos(diaryId, fd);
+
+    // 업로드 후 상태 정리 + 기존사진 재조회
+    setNewFiles([]);
+    setNewPreviews([]);
+    const list = await fetchDiaryPhotos(diaryId);
+    setExistingPhotos(list);
+  };
+
   const onSubmit = async () => {
     setErr("");
 
@@ -217,17 +266,12 @@ export default function WritePage() {
       };
 
       if (isEdit) {
-        const updated = await updateDiary(id, payload);
-        // 사진 선택했으면 추가 업로드
-        if (photos.length) {
-          await uploadDiaryPhotos(id, photos);
-        }
+        await updateDiary(id, payload);
+        await uploadIfAny(id);
         nav(`/diary/${id}`, { replace: true });
       } else {
         const created = await createDiary(payload);
-        if (photos.length) {
-          await uploadDiaryPhotos(created.id, photos);
-        }
+        await uploadIfAny(created.id);
         nav("/", { replace: true });
       }
     } catch (e) {
@@ -486,33 +530,114 @@ export default function WritePage() {
 
       <div style={{ marginTop: 14 }}>
         <label style={styles.label}>사진 (최대 3장)</label>
+
+        {/* 기존 사진 (수정 모드) */}
+        {isEdit && existingPhotos.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>기존 사진</div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {existingPhotos.map((p) => (
+                <div key={p.id} style={{ position: "relative" }}>
+                  <img
+                    src={encodeURI(p.url)}
+                    alt=""
+                    style={{
+                      width: 90,
+                      height: 90,
+                      objectFit: "cover",
+                      borderRadius: 12,
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = window.confirm("이 사진을 삭제할까요?");
+                      if (!ok) return;
+
+                      try {
+                        await deleteDiaryPhoto(id, p.id);
+                        setExistingPhotos((prev) =>
+                          prev.filter((x) => x.id !== p.id)
+                        );
+                      } catch (e) {
+                        console.error(e);
+                        alert("사진 삭제 실패");
+                      }
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      border: "none",
+                      borderRadius: 999,
+                      padding: "4px 8px",
+                      fontSize: 12,
+                      fontWeight: 900,
+                      background: "rgba(0,0,0,0.75)",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 새 사진 선택 */}
         <input
           type="file"
           accept="image/*"
           multiple
           onChange={(e) => {
-            const list = Array.from(e.target.files || []).slice(0, 3);
-            setPhotos(list);
-            setPhotoPreviews(list.map((f) => URL.createObjectURL(f)));
+            const files = Array.from(e.target.files || []);
+
+            const remain = 3 - existingPhotos.length;
+            if (remain <= 0) {
+              alert(
+                "이미 사진이 3장 등록되어 있습니다. 먼저 삭제 후 추가하세요."
+              );
+              e.target.value = "";
+              return;
+            }
+
+            if (files.length > remain) {
+              alert(
+                `현재 ${existingPhotos.length}장 등록됨. ${remain}장까지만 추가 가능!`
+              );
+              e.target.value = "";
+              return;
+            }
+
+            setNewFiles(files);
+            setNewPreviews(files.map((f) => URL.createObjectURL(f)));
           }}
         />
-        <div
-          style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}
-        >
-          {photoPreviews.map((src) => (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              style={{
-                width: 90,
-                height: 90,
-                objectFit: "cover",
-                borderRadius: 12,
-              }}
-            />
-          ))}
-        </div>
+
+        {/* 새 사진 미리보기 */}
+        {newPreviews.length > 0 && (
+          <div
+            style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}
+          >
+            {newPreviews.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                style={{
+                  width: 90,
+                  height: 90,
+                  objectFit: "cover",
+                  borderRadius: 12,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {err && <div style={{ marginTop: 12, color: "crimson" }}>{err}</div>}
