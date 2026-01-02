@@ -134,7 +134,7 @@ export default function DiaryDetailPage() {
                 {photos.map((p) => (
                   <img
                     key={p.id}
-                    src={p.photo_url} // 컬럼명 확인!
+                    src={encodeURI(p.url)}
                     alt=""
                     style={{
                       width: 120,

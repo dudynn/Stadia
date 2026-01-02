@@ -8,23 +8,20 @@ import fs from "fs";
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const uploadDir = path.join(process.cwd(), "uploads");
 
-const uploadDir = path.join(__dirname, "..", "..", "uploads"); // server/uploads
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const uploads = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      fs.mkdirSync(uploadDir, { recursive: true }); // 없으면 생성
-      cb(null, uploadDir);
-    },
+    destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
-      cb(null, `${Date.now()} - ${Math.random().toString(16).slice(2)}${ext}`);
+      const safe = `${Date.now()}-${Math.random().toString(16).slice(2)}${ext}`;
+      cb(null, safe);
     },
   }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
 /**
@@ -47,7 +44,6 @@ router.post("/", async (req, res) => {
       score_away,
     } = req.body;
 
-    // 필수값 체크
     if (
       !user_id ||
       !sport ||
@@ -65,10 +61,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "one_liner too long (<=120)" });
     }
 
-    // result 기본값 처리
     const safeResult = result ?? "unknown";
-
-    // 점수는 숫자거나 null만 허용
     const safeScoreHome =
       score_home === "" || score_home === undefined ? null : Number(score_home);
     const safeScoreAway =
@@ -96,11 +89,10 @@ router.post("/", async (req, res) => {
         sport,
         team_home,
         team_away ?? null,
-        game_date, // 'YYYY-MM-DD' 형태면 OK
+        game_date,
         venue_name,
         one_liner,
         vis,
-
         safeResult,
         safeScoreHome,
         safeScoreAway,
@@ -116,7 +108,7 @@ router.post("/", async (req, res) => {
 
 /**
  * POST /api/diaries/:id/photos
- * 사진 업로드
+ * 사진 업로드 (최대 3장)
  */
 router.post("/:id/photos", uploads.array("photos", 3), async (req, res) => {
   try {
@@ -126,13 +118,12 @@ router.post("/:id/photos", uploads.array("photos", 3), async (req, res) => {
     const files = req.files ?? [];
     if (!files.length) return res.status(400).json({ error: "no files" });
 
-    // pool 사용
     const inserted = [];
 
     for (const f of files) {
       const url = `/uploads/${f.filename}`;
       const r = await pool.query(
-        "INSERT INTO diary_photos (diary_id, url) VALUES ($1, $2)",
+        "INSERT INTO diary_photos (diary_id, url) VALUES ($1, $2) RETURNING *",
         [diaryId, url]
       );
       inserted.push(r.rows[0]);
@@ -190,7 +181,7 @@ router.get("/", async (req, res) => {
 
 /**
  * GET /api/diaries/:id
- * 상세
+ * 상세 + photos 같이 내려주기
  */
 router.get("/:id", async (req, res) => {
   try {
@@ -198,9 +189,17 @@ router.get("/:id", async (req, res) => {
     const { rows } = await pool.query("SELECT * FROM diaries WHERE id=$1", [
       id,
     ]);
-
     if (!rows.length) return res.status(404).json({ message: "not found" });
-    return res.json(rows[0]);
+
+    const diary = rows[0];
+
+    // 사진도 같이 조회
+    const photoRes = await pool.query(
+      "SELECT * FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC",
+      [id]
+    );
+
+    return res.json({ ...diary, photos: photoRes.rows });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
@@ -247,7 +246,6 @@ router.put("/:id", async (req, res) => {
       score_away,
     } = req.body;
 
-    // 최소 검증
     if (!sport || !team_home || !game_date || !venue_name || !one_liner) {
       return res.status(400).json({ error: "missing fields" });
     }
