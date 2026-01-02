@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { createDiary, fetchDiaryById, updateDiary } from "../lib/api.js";
 import PageContainer from "../components/PageContainer.jsx";
+import { uploadDiaryPhotos } from "../lib/api.js";
 
 import {
   BASEBALL_TEAMS,
@@ -83,6 +84,10 @@ export default function WritePage() {
   const [result, setResult] = useState("unknown");
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
+
+  // 사진 추가
+  const [photos, setPhotos] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
 
   // 배구 팀 목록
   const vTeams = vGender === "male" ? V_LEAGUE_MEN : V_LEAGUE_WOMEN;
@@ -212,10 +217,17 @@ export default function WritePage() {
       };
 
       if (isEdit) {
-        await updateDiary(id, payload);
+        const updated = await updateDiary(id, payload);
+        // 사진 선택했으면 추가 업로드
+        if (photos.length) {
+          await uploadDiaryPhotos(id, photos);
+        }
         nav(`/diary/${id}`, { replace: true });
       } else {
-        await createDiary(payload);
+        const created = await createDiary(payload);
+        if (photos.length) {
+          await uploadDiaryPhotos(created.id, photos);
+        }
         nav("/", { replace: true });
       }
     } catch (e) {
@@ -470,6 +482,37 @@ export default function WritePage() {
           placeholder="120자 이하"
           style={styles.input}
         />
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <label style={styles.label}>사진 (최대 3장)</label>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => {
+            const list = Array.from(e.target.files || []).slice(0, 3);
+            setPhotos(list);
+            setPhotoPreviews(list.map((f) => URL.createObjectURL(f)));
+          }}
+        />
+        <div
+          style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}
+        >
+          {photoPreviews.map((src) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              style={{
+                width: 90,
+                height: 90,
+                objectFit: "cover",
+                borderRadius: 12,
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       {err && <div style={{ marginTop: 12, color: "crimson" }}>{err}</div>}

@@ -3,10 +3,18 @@ import cors from "cors";
 import { pool } from "./db.js";
 import userRouter from "./routes/users.js";
 import diariesRouter from "./routes/diaries.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(cors());
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/users", userRouter);
 app.use("/api/diaries", diariesRouter);
 
@@ -216,3 +224,5 @@ app.delete("/api/diaries/:id", async (req, res) => {
 app.listen(process.env.PORT || 4000, () => {
   console.log(`Server is running on http:${process.env.PORT || 4000}`);
 });
+
+export default app;

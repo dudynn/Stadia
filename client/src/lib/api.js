@@ -91,3 +91,32 @@ export async function deleteDiary(id) {
   }
   return res.json();
 }
+
+export async function uploadDiaryPhotos(diaryId, files) {
+  const fd = new FormData();
+  for (const f of files) fd.append("photos", f);
+
+  const res = await fetch(`/api/diaries/${diaryId}/photos`, {
+    method: "POST",
+    body: fd,
+  });
+
+  if (!res.ok) throw new Error("Failed to upload photos");
+  return res.json();
+}
+
+export async function fetchDiaryPhotos(diaryId) {
+  const res = await fetch(`/api/diaries/${diaryId}/photos`);
+
+  if (!res.ok) throw new Error("Failed to fetch photos");
+  return res.json();
+}
+
+export async function deleteDiaryPhoto(diaryId, photoId) {
+  const res = await fetch(`/api/diaries/${diaryId}/photos/${photoId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) throw new Error("Failed to delete photo");
+  return res.json();
+}

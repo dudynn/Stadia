@@ -1,7 +1,31 @@
 import express from "express";
 import { pool } from "../db.js";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import { error } from "console";
+import fs from "fs";
 
 const router = express.Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadDir = path.join(__dirname, "..", "..", "uploads"); // server/uploads
+
+const uploads = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      fs.mkdirSync(uploadDir, { recursive: true }); // 없으면 생성
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()} - ${Math.random().toString(16).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
+});
 
 /**
  * POST /api/diaries
@@ -91,6 +115,37 @@ router.post("/", async (req, res) => {
 });
 
 /**
+ * POST /api/diaries/:id/photos
+ * 사진 업로드
+ */
+router.post("/:id/photos", uploads.array("photos", 3), async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    if (!diaryId) return res.status(400).json({ error: "invalid id" });
+
+    const files = req.files ?? [];
+    if (!files.length) return res.status(400).json({ error: "no files" });
+
+    // pool 사용
+    const inserted = [];
+
+    for (const f of files) {
+      const url = `/uploads/${f.filename}`;
+      const r = await pool.query(
+        "INSERT INTO diary_photos (diary_id, url) VALUES ($1, $2)",
+        [diaryId, url]
+      );
+      inserted.push(r.rows[0]);
+    }
+
+    return res.status(201).json(inserted);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "upload failed" });
+  }
+});
+
+/**
  * GET /api/diaries?userId=1&sport=baseball
  * 내 기록 리스트
  */
@@ -149,6 +204,24 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
+ * GET /api/diaries/:id/photos
+ * 사진 조회
+ */
+router.get("/:id/photos", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const r = await pool.query(
+      `SELECT * FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC`,
+      [diaryId]
+    );
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "failed" });
   }
 });
 
@@ -253,6 +326,25 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
+ * DELETE /api/diaries/:id/photos/:photoId
+ * 사진 삭제
+ */
+router.delete("/:id/photos/:photoId", async (req, res) => {
+  try {
+    const photoId = Number(req.params.photoId);
+    const r = await pool.query(
+      `DELETE FROM diary_photos WHERE id=$1 RETURNING id`,
+      [photoId]
+    );
+    if (!r.rowCount) return res.status(404).json({ error: "not found" });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "failed" });
   }
 });
 

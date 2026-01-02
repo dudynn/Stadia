@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { deleteDiaryById, fetchDiaryById } from "../lib/api.js";
 import KakaoMapByKeyword from "../components/KakaoMapByKeyword.jsx";
 import PageContainer from "../components/PageContainer.jsx";
+import { fetchDiaryPhotos } from "../lib/api.js";
 
 function formatDate(dateLike) {
   if (!dateLike) return "";
@@ -22,6 +23,8 @@ export default function DiaryDetailPage() {
   const [err, setErr] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [photos, setPhotos] = useState([]);
+
   useEffect(() => {
     let alive = true;
 
@@ -39,6 +42,21 @@ export default function DiaryDetailPage() {
       }
     })();
 
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const list = await fetchDiaryPhotos(id);
+        if (alive) setPhotos(list);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -106,6 +124,27 @@ export default function DiaryDetailPage() {
                   · {data.score_home} : {data.score_away}
                 </>
               )}
+            </div>
+          )}
+
+          {photos.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>사진</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {photos.map((p) => (
+                  <img
+                    key={p.id}
+                    src={p.photo_url} // 컬럼명 확인!
+                    alt=""
+                    style={{
+                      width: 120,
+                      height: 120,
+                      objectFit: "cover",
+                      borderRadius: 14,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
