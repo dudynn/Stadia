@@ -9,13 +9,24 @@ export async function fetchMyFavorites() {
   return res.json();
 }
 
-export async function fetchMyDiaries({ sport }) {
+export async function fetchDiaries({ sport, visibility }) {
+  const qs = new URLSearchParams();
+  if (sport) qs.set("sport", sport);
+  if (visibility) qs.set("visibility", visibility);
+
+  const res = await fetch(`/api/diaries?${qs.toString()}`);
+  if (!res.ok) throw new Error("failed to fetch diaries");
+  return res.json();
+}
+
+export async function fetchMyDiaries({ sport, visibility }) {
   const userId = getGuestUserId();
   if (!userId) return [];
 
   const qs = new URLSearchParams({ userId, sport });
-  const res = await fetch(`/api/diaries?${qs.toString()}`);
+  if (visibility) qs.set("visibility", visibility);
 
+  const res = await fetch(`/api/diaries?${qs.toString()}`);
   if (!res.ok) throw new Error("failed to fetch diaries");
   return res.json();
 }
@@ -115,5 +126,36 @@ export async function deleteDiaryPhoto(diaryId, photoId) {
   });
 
   if (!res.ok) throw new Error("Failed to delete photo");
+  return res.json();
+}
+
+export async function fetchDiaryLikes(diaryId) {
+  const userId = getGuestUserId();
+  const qs = new URLSearchParams();
+  if (userId) qs.set("userId", userId);
+
+  const res = await fetch(`/api/diaries/${diaryId}/likes?${qs.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch likes");
+  return res.json();
+}
+
+export async function likeDiary(diaryId) {
+  const userId = getGuestUserId();
+  const res = await fetch(`/api/diaries/${diaryId}/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error("Failed to like");
+  return res.json();
+}
+
+export async function unlikeDiary(diaryId) {
+  const userId = getGuestUserId();
+  const qs = new URLSearchParams({ userId });
+  const res = await fetch(`/api/diaries/${diaryId}/likes?${qs.toString()}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to unlike");
   return res.json();
 }

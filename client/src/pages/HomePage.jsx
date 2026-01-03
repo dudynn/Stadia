@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMyDiaries } from "../lib/api.js";
+import { fetchMyDiaries, fetchDiaries } from "../lib/api.js";
 import PageContainer from "../components/PageContainer.jsx";
 
 function fmtDate(dateLike) {
@@ -132,6 +132,13 @@ function DiaryCard({ d, onClick }) {
           자세히 →
         </div>
       </div>
+
+      {/* 닉네임/좋아요 수 표시 */}
+      <div
+        style={{ marginTop: 10, fontSize: 12, color: "#666", fontWeight: 800 }}
+      >
+        {d.nickname ? `${d.nickname} · ` : ""}♥ {d.like_count ?? 0}
+      </div>
     </div>
   );
 }
@@ -143,6 +150,7 @@ export default function HomePage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [feed, setFeed] = useState("private"); // "private" | "public"
 
   useEffect(() => {
     let alive = true;
@@ -151,7 +159,10 @@ export default function HomePage() {
       try {
         setLoading(true);
         setErr("");
-        const data = await fetchMyDiaries({ sport });
+        const data =
+          feed === "mine"
+            ? await fetchMyDiaries({ sport })
+            : await fetchDiaries({ sport, visibility: "public" });
         if (alive) setItems(data);
       } catch (e) {
         console.error(e);
@@ -185,6 +196,22 @@ export default function HomePage() {
             style={tabBtn(sport === "volleyball")}
           >
             배구
+          </button>
+        </div>
+
+        {/* 공개 범위 필터 */}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={() => setFeed("mine")}
+            style={tabBtn(feed === "mine")}
+          >
+            내 기록
+          </button>
+          <button
+            onClick={() => setFeed("public")}
+            style={tabBtn(feed === "public")}
+          >
+            공개 피드
           </button>
         </div>
       </div>

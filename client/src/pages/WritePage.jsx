@@ -67,6 +67,9 @@ export default function WritePage() {
 
   const [sport, setSport] = useState("baseball");
 
+  // 공개 범위
+  const [visibility, setVisibility] = useState("private"); // private | public
+
   // 야구
   const [baseballHome, setBaseballHome] = useState(BASEBALL_TEAMS[0]);
   const [baseballAway, setBaseballAway] = useState(BASEBALL_TEAMS[1]);
@@ -167,6 +170,8 @@ export default function WritePage() {
         setGameDate(toYYYYMMDD(d.game_date));
         setOneLiner(d.one_liner ?? "");
 
+        setVisibility(d.visibility ?? "private");
+
         if (d.sport === "baseball") {
           setBaseballHome(d.team_home);
           setBaseballAway(d.team_away ?? d.team_home);
@@ -259,7 +264,7 @@ export default function WritePage() {
         game_date: gameDate,
         venue_name: venueName.trim(),
         one_liner: oneLiner.trim(),
-        visibility: "private",
+        visibility,
         result,
         score_home: scoreHome === "" ? null : Number(scoreHome),
         score_away: scoreAway === "" ? null : Number(scoreAway),
@@ -285,6 +290,44 @@ export default function WritePage() {
   return (
     <PageContainer>
       <h1 style={{ margin: 0 }}>{isEdit ? "기록 수정" : "기록 작성"}</h1>
+
+      <div style={{ marginTop: 14 }}>
+        <label style={styles.label}>공개 범위</label>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setVisibility("private")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              border: visibility === "private" ? "none" : "1px solid #ddd",
+              background: visibility === "private" ? "#111" : "#fff",
+              color: visibility === "private" ? "#fff" : "#111",
+              fontWeight: 800,
+            }}
+          >
+            비공개
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVisibility("public")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              border: visibility === "public" ? "none" : "1px solid #ddd",
+              background: visibility === "public" ? "#111" : "#fff",
+              color: visibility === "public" ? "#fff" : "#111",
+              fontWeight: 800,
+            }}
+          >
+            공개
+          </button>
+        </div>
+      </div>
 
       <div style={{ marginTop: 14 }}>
         <label style={styles.label}>종목</label>

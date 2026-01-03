@@ -137,6 +137,39 @@ router.post("/:id/photos", uploads.array("photos", 3), async (req, res) => {
 });
 
 /**
+ * 좋아요 누르기
+ */
+router.post("/:id/likes", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const { user_id } = req.body;
+
+    if (!diaryId || !user_id) {
+      return res.status(400).json({ message: "invalid diaryId or user_id" });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO likes (diary_id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (diary_id, user_id) DO NOTHING
+      `,
+      [diaryId, Number(user_id)]
+    );
+
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS like_count FROM likes WHERE diary_id=$1`,
+      [diaryId]
+    );
+
+    return res.json({ ok: true, like_count: rows[0].like_count, liked: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
  * GET /api/diaries?userId=1&sport=baseball
  * 내 기록 리스트
  */
@@ -149,29 +182,37 @@ router.get("/", async (req, res) => {
 
     if (userId) {
       values.push(Number(userId));
-      conditions.push(`user_id = $${values.length}`);
+      conditions.push(`d.user_id = $${values.length}`);
     }
     if (sport) {
       values.push(sport);
-      conditions.push(`sport = $${values.length}`);
+      conditions.push(`d.sport = $${values.length}`);
     }
     if (visibility) {
       values.push(visibility);
-      conditions.push(`visibility = $${values.length}`);
+      conditions.push(`d.visibility = $${values.length}`);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const { rows } = await pool.query(
       `
-      SELECT *
-      FROM diaries
+      SELECT
+        d.*,
+        u.nickname,
+        COALESCE(lc.like_count, 0) AS like_count
+      FROM diaries d
+      JOIN users u ON u.id = d.user_id
+      LEFT JOIN (
+        SELECT diary_id, COUNT(*)::int AS like_count
+        FROM likes
+        GROUP BY diary_id
+      ) lc ON lc.diary_id = d.id
       ${where}
-      ORDER BY game_date DESC, created_at DESC
+      ORDER BY d.game_date DESC, d.created_at DESC
       `,
       values
     );
-
     return res.json(rows);
   } catch (err) {
     console.error(err);
@@ -186,16 +227,32 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { rows } = await pool.query("SELECT * FROM diaries WHERE id=$1", [
-      id,
-    ]);
+    if (!id) return res.status(400).json({ message: "invalid id" });
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        d.*,
+        u.nickname,
+        COALESCE(lc.like_count, 0) AS like_count
+      FROM diaries d
+      JOIN users u ON u.id = d.user_id
+      LEFT JOIN (
+        SELECT diary_id, COUNT(*)::int AS like_count
+        FROM likes
+        GROUP BY diary_id
+      ) lc ON lc.diary_id = d.id
+      WHERE d.id = $1
+      `,
+      [id]
+    );
+
     if (!rows.length) return res.status(404).json({ message: "not found" });
 
     const diary = rows[0];
 
-    // 사진도 같이 조회
     const photoRes = await pool.query(
-      "SELECT * FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC",
+      `SELECT id, url FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC`,
       [id]
     );
 
@@ -221,6 +278,35 @@ router.get("/:id/photos", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "failed" });
+  }
+});
+
+/**
+ * 좋아요 누가 눌렀는지 조회 (상세 진입 시)
+ */
+router.get("/:id/likes", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const userId = Number(req.query.userId);
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS like_count FROM likes WHERE diary_id=$1`,
+      [diaryId]
+    );
+
+    let liked = false;
+    if (userId) {
+      const likedRes = await pool.query(
+        `SELECT 1 FROM likes WHERE diary_id=$1 AND user_id=$2 LIMIT 1`,
+        [diaryId, userId]
+      );
+      liked = likedRes.rows.length > 0;
+    }
+
+    res.json({ like_count: countRes.rows[0].like_count, liked });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "internal server error" });
   }
 });
 
@@ -343,6 +429,35 @@ router.delete("/:id/photos/:photoId", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "failed" });
+  }
+});
+
+/**
+ * 좋아요 취소
+ */
+router.delete("/:id/likes", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const userId = Number(req.query.userId);
+
+    if (!diaryId || !userId) {
+      return res.status(400).json({ message: "invalid diaryId or userId" });
+    }
+
+    await pool.query(`DELETE FROM likes WHERE diary_id=$1 AND user_id=$2`, [
+      diaryId,
+      userId,
+    ]);
+
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS like_count FROM likes WHERE diary_id=$1`,
+      [diaryId]
+    );
+
+    return res.json({ ok: true, like_count: rows[0].like_count, liked: false });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "internal server error" });
   }
 });
 

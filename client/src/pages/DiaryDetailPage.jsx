@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { deleteDiaryById, fetchDiaryById } from "../lib/api.js";
 import KakaoMapByKeyword from "../components/KakaoMapByKeyword.jsx";
 import PageContainer from "../components/PageContainer.jsx";
-import { fetchDiaryPhotos } from "../lib/api.js";
+import {
+  fetchDiaryPhotos,
+  fetchDiaryLikes,
+  likeDiary,
+  unlikeDiary,
+} from "../lib/api.js";
 
 function formatDate(dateLike) {
   if (!dateLike) return "";
@@ -27,6 +32,9 @@ export default function DiaryDetailPage() {
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerSrc, setViewerSrc] = useState("");
+
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -70,6 +78,23 @@ export default function DiaryDetailPage() {
       try {
         const list = await fetchDiaryPhotos(id);
         if (alive) setPhotos(list);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetchDiaryLikes(id);
+        if (!alive) return;
+        setLikeCount(r.like_count);
+        setLiked(r.liked);
       } catch (e) {
         console.error(e);
       }
@@ -185,6 +210,46 @@ export default function DiaryDetailPage() {
       <div style={{ marginTop: 14 }}>
         <div style={{ fontWeight: 900, marginBottom: 8 }}>지도</div>
         <KakaoMapByKeyword keyword={data.venue_name} />
+      </div>
+
+      {/* 좋아요 버튼 */}
+      <div
+        style={{
+          marginTop: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 900, color: "#555" }}>
+          작성자: {data.nickname ?? "?"}
+        </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const r = liked ? await unlikeDiary(id) : await likeDiary(id);
+              setLiked(r.liked);
+              setLikeCount(r.like_count);
+            } catch (e) {
+              console.error(e);
+              alert("좋아요 처리 실패");
+            }
+          }}
+          style={{
+            marginLeft: "auto",
+            padding: "8px 10px",
+            borderRadius: 999,
+            border: "1px solid #ddd",
+            background: liked ? "#111" : "#fff",
+            color: liked ? "#fff" : "#111",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          {liked ? "♥" : "♡"} 좋아요 {likeCount}
+        </button>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
