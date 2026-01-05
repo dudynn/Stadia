@@ -1,10 +1,12 @@
 import { getGuestUserId } from "./auth.js";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
 export async function fetchMyFavorites() {
   const userId = getGuestUserId();
   if (!userId) return [];
 
-  const res = await fetch(`/api/users/${userId}/favorites`);
+  const res = await fetch(`${API_BASE}/api/users/${userId}/favorites`);
   if (!res.ok) throw new Error("failed to fetch favorites");
   return res.json();
 }
@@ -14,7 +16,7 @@ export async function fetchDiaries({ sport, visibility }) {
   if (sport) qs.set("sport", sport);
   if (visibility) qs.set("visibility", visibility);
 
-  const res = await fetch(`/api/diaries?${qs.toString()}`);
+  const res = await fetch(`${API_BASE}/api/diaries?${qs.toString()}`);
   if (!res.ok) throw new Error("failed to fetch diaries");
   return res.json();
 }
@@ -26,7 +28,7 @@ export async function fetchMyDiaries({ sport, visibility }) {
   const qs = new URLSearchParams({ userId, sport });
   if (visibility) qs.set("visibility", visibility);
 
-  const res = await fetch(`/api/diaries?${qs.toString()}`);
+  const res = await fetch(`${API_BASE}/api/diaries?${qs.toString()}`);
   if (!res.ok) throw new Error("failed to fetch diaries");
   return res.json();
 }
@@ -35,7 +37,7 @@ export async function createDiary(payload) {
   const userId = getGuestUserId();
   if (!userId) throw new Error("no user");
 
-  const res = await fetch("/api/diaries", {
+  const res = await fetch(`${API_BASE}/api/diaries`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -55,7 +57,7 @@ export async function saveFavorite({ sport, gender, team_code }) {
   const userId = getGuestUserId();
   if (!userId) throw new Error("no user");
 
-  const res = await fetch(`/api/users/${userId}/favorites`, {
+  const res = await fetch(`${API_BASE}/api/users/${userId}/favorites`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sport, gender, team_code }),
@@ -76,13 +78,13 @@ export async function saveFavorite({ sport, gender, team_code }) {
 export async function fetchDiaryById(id) {
   const userId = getGuestUserId();
   const qs = userId ? `?userId=${userId}` : "";
-  const res = await fetch(`/api/diaries/${id}${qs}`);
+  const res = await fetch(`${API_BASE}/api/diaries/${id}${qs}`);
   if (!res.ok) throw new Error("Failed to fetch diary");
   return res.json();
 }
 
 export async function updateDiary(id, payload) {
-  const res = await fetch(`/api/diaries/${id}`, {
+  const res = await fetch(`${API_BASE}/api/diaries/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -93,13 +95,15 @@ export async function updateDiary(id, payload) {
 }
 
 export async function deleteDiaryById(id) {
-  const res = await fetch(`/api/diaries/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/api/diaries/${id}`, {
+    method: "DELETE",
+  });
   if (!res.ok) throw new Error("Failed to delete diary");
   return true;
 }
 
 export async function deleteDiary(id) {
-  const res = await fetch(`/api/diaries/${id}`, {
+  const res = await fetch(`${API_BASE}/api/diaries/${id}`, {
     method: "DELETE",
   });
 
@@ -111,7 +115,7 @@ export async function deleteDiary(id) {
 }
 
 export async function uploadDiaryPhotos(diaryId, formData) {
-  const res = await fetch(`/api/diaries/${diaryId}/photos`, {
+  const res = await fetch(`${API_BASE}/api/diaries/${diaryId}/photos`, {
     method: "POST",
     body: formData,
   });
@@ -121,16 +125,19 @@ export async function uploadDiaryPhotos(diaryId, formData) {
 }
 
 export async function fetchDiaryPhotos(diaryId) {
-  const res = await fetch(`/api/diaries/${diaryId}/photos`);
+  const res = await fetch(`${API_BASE}/api/diaries/${diaryId}/photos`);
 
   if (!res.ok) throw new Error("Failed to fetch photos");
   return res.json();
 }
 
 export async function deleteDiaryPhoto(diaryId, photoId) {
-  const res = await fetch(`/api/diaries/${diaryId}/photos/${photoId}`, {
-    method: "DELETE",
-  });
+  const res = await fetch(
+    `${API_BASE}/api/diaries/${diaryId}/photos/${photoId}`,
+    {
+      method: "DELETE",
+    }
+  );
 
   if (!res.ok) throw new Error("Failed to delete photo");
   return res.json();
@@ -141,7 +148,9 @@ export async function fetchDiaryLikes(diaryId) {
   const qs = new URLSearchParams();
   if (userId) qs.set("userId", userId);
 
-  const res = await fetch(`/api/diaries/${diaryId}/likes?${qs.toString()}`);
+  const res = await fetch(
+    `${API_BASE}/api/diaries/${diaryId}/likes?${qs.toString()}`
+  );
   if (!res.ok) throw new Error("Failed to fetch likes");
   return res.json();
 }
@@ -150,7 +159,7 @@ export async function likeDiary(diaryId) {
   const userId = getGuestUserId();
   if (!userId) throw new Error("no user");
 
-  const res = await fetch(`/api/diaries/${diaryId}/likes`, {
+  const res = await fetch(`${API_BASE}/api/diaries/${diaryId}/likes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId }),
@@ -162,15 +171,18 @@ export async function likeDiary(diaryId) {
 export async function unlikeDiary(diaryId) {
   const userId = getGuestUserId();
   const qs = new URLSearchParams({ userId });
-  const res = await fetch(`/api/diaries/${diaryId}/likes?${qs.toString()}`, {
-    method: "DELETE",
-  });
+  const res = await fetch(
+    `${API_BASE}/api/diaries/${diaryId}/likes?${qs.toString()}`,
+    {
+      method: "DELETE",
+    }
+  );
   if (!res.ok) throw new Error("Failed to unlike");
   return res.json();
 }
 
 export async function fetchDiaryComments(diaryId) {
-  const res = await fetch(`/api/diaries/${diaryId}/comments`);
+  const res = await fetch(`${API_BASE}/api/diaries/${diaryId}/comments`);
   if (!res.ok) throw new Error("Failed to fetch comments");
   return res.json();
 }
@@ -179,7 +191,7 @@ export async function createDiaryComment(diaryId, content) {
   const userId = getGuestUserId();
   if (!userId) throw new Error("no user");
 
-  const res = await fetch(`/api/diaries/${diaryId}/comments`, {
+  const res = await fetch(`${API_BASE}/api/diaries/${diaryId}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, content }),
@@ -198,7 +210,7 @@ export async function deleteDiaryComment(diaryId, commentId) {
 
   const qs = new URLSearchParams({ userId });
   const res = await fetch(
-    `/api/diaries/${diaryId}/comments/${commentId}?${qs.toString()}`,
+    `${API_BASE}/api/diaries/${diaryId}/comments/${commentId}?${qs.toString()}`,
     { method: "DELETE" }
   );
 
