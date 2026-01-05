@@ -68,8 +68,15 @@ export async function saveFavorite({ sport, gender, team_code }) {
   return res.json();
 }
 
+// export async function fetchDiaryById(id) {
+//   const res = await fetch(`/api/diaries/${id}`);
+//   if (!res.ok) throw new Error("Failed to fetch diary");
+//   return res.json();
+// }
 export async function fetchDiaryById(id) {
-  const res = await fetch(`/api/diaries/${id}`);
+  const userId = getGuestUserId();
+  const qs = userId ? `?userId=${userId}` : "";
+  const res = await fetch(`/api/diaries/${id}${qs}`);
   if (!res.ok) throw new Error("Failed to fetch diary");
   return res.json();
 }
@@ -141,6 +148,8 @@ export async function fetchDiaryLikes(diaryId) {
 
 export async function likeDiary(diaryId) {
   const userId = getGuestUserId();
+  if (!userId) throw new Error("no user");
+
   const res = await fetch(`/api/diaries/${diaryId}/likes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -157,5 +166,45 @@ export async function unlikeDiary(diaryId) {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Failed to unlike");
+  return res.json();
+}
+
+export async function fetchDiaryComments(diaryId) {
+  const res = await fetch(`/api/diaries/${diaryId}/comments`);
+  if (!res.ok) throw new Error("Failed to fetch comments");
+  return res.json();
+}
+
+export async function createDiaryComment(diaryId, content) {
+  const userId = getGuestUserId();
+  if (!userId) throw new Error("no user");
+
+  const res = await fetch(`/api/diaries/${diaryId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, content }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create comment");
+  }
+  return res.json();
+}
+
+export async function deleteDiaryComment(diaryId, commentId) {
+  const userId = getGuestUserId();
+  if (!userId) throw new Error("no user");
+
+  const qs = new URLSearchParams({ userId });
+  const res = await fetch(
+    `/api/diaries/${diaryId}/comments/${commentId}?${qs.toString()}`,
+    { method: "DELETE" }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to delete comment");
+  }
   return res.json();
 }

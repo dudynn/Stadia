@@ -12,7 +12,20 @@ function fmtDate(dateLike) {
   return `${yyyy}.${mm}.${dd}`;
 }
 
-function Badge({ children }) {
+function Badge({ children, variant }) {
+  const styles = {
+    baseball: {
+      background: "#96CDFF",
+      border: "1px solid #C7DBFF",
+      color: "black",
+    },
+    volleyball: {
+      background: "#84D2F6",
+      border: "1px solid #C7DBFF",
+      color: "black",
+    },
+  };
+
   return (
     <span
       style={{
@@ -22,9 +35,7 @@ function Badge({ children }) {
         borderRadius: 999,
         fontSize: 12,
         fontWeight: 800,
-        background: "#f4f4f4",
-        border: "1px solid #eee",
-        color: "#333",
+        ...styles[variant],
       }}
     >
       {children}
@@ -87,7 +98,10 @@ function DiaryCard({ d, onClick }) {
           gap: 10,
         }}
       >
-        <Badge>{isBaseball ? "⚾ 야구" : "🏐 배구"}</Badge>
+        <Badge variant={isBaseball ? "baseball" : "volleyball"}>
+          {isBaseball ? "⚾️ 야구" : "🏐 배구"}
+        </Badge>
+
         <div style={{ fontSize: 12, color: "#777", fontWeight: 700 }}>
           {fmtDate(d.game_date)}
         </div>

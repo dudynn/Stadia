@@ -346,8 +346,8 @@ export default function WritePage() {
           <label style={styles.label}>팀 선택</label>
 
           <div style={styles.haRow}>
-            <span style={styles.haTag}>HOME</span>
-            <span style={styles.haTag}>AWAY</span>
+            <span style={styles.haTag_home}>HOME</span>
+            <span style={styles.haTag_away}>AWAY</span>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
@@ -736,12 +736,23 @@ const styles = {
     padding: "0 6px",
   },
 
-  haTag: {
+  haTag_away: {
     fontSize: 10,
     fontWeight: 900,
     color: "#444",
     letterSpacing: "0.6px",
     background: "#f3f4f6",
+    border: "1px solid #e5e7eb",
+    padding: "3px 8px",
+    borderRadius: 999,
+  },
+
+  haTag_home: {
+    fontSize: 10,
+    fontWeight: 900,
+    color: "#f3f4f6",
+    letterSpacing: "0.6px",
+    background: "#444",
     border: "1px solid #e5e7eb",
     padding: "3px 8px",
     borderRadius: 999,

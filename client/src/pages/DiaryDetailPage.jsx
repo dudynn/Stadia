@@ -9,6 +9,12 @@ import {
   likeDiary,
   unlikeDiary,
 } from "../lib/api.js";
+import {
+  fetchDiaryComments,
+  createDiaryComment,
+  deleteDiaryComment,
+} from "../lib/api.js";
+import { getGuestUserId } from "../lib/auth.js";
 
 function formatDate(dateLike) {
   if (!dateLike) return "";
@@ -22,6 +28,7 @@ function formatDate(dateLike) {
 export default function DiaryDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
+  const myUserId = getGuestUserId();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +42,10 @@ export default function DiaryDetailPage() {
 
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
+
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -95,6 +106,21 @@ export default function DiaryDetailPage() {
         if (!alive) return;
         setLikeCount(r.like_count);
         setLiked(r.liked);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const list = await fetchDiaryComments(id);
+        if (alive) setComments(list);
       } catch (e) {
         console.error(e);
       }
@@ -262,6 +288,117 @@ export default function DiaryDetailPage() {
         <button onClick={onDelete} disabled={deleting} style={btnDanger}>
           {deleting ? "삭제 중..." : "삭제"}
         </button>
+      </div>
+
+      {/* 댓글 */}
+      <div style={{ marginTop: 18 }}>
+        <div style={{ fontWeight: 900, marginBottom: 8 }}>
+          댓글 {comments.length}
+        </div>
+
+        {/* 작성 */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="댓글을 입력하세요 (최대 300자)"
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid #ddd",
+              outline: "none",
+            }}
+          />
+          <button
+            type="button"
+            disabled={commentLoading}
+            onClick={async () => {
+              const text = commentText.trim();
+              if (!text) return;
+              if (text.length > 300) return alert("댓글은 300자 이하입니다.");
+
+              setCommentLoading(true);
+              try {
+                const created = await createDiaryComment(id, text);
+                setComments((prev) => [...prev, created]);
+                setCommentText("");
+              } catch (e) {
+                console.error(e);
+                alert("댓글 작성 실패");
+              } finally {
+                setCommentLoading(false);
+              }
+            }}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "none",
+              background: "#111",
+              color: "#fff",
+              fontWeight: 900,
+              cursor: "pointer",
+              opacity: commentLoading ? 0.7 : 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {commentLoading ? "등록중" : "등록"}
+          </button>
+        </div>
+
+        {/* 리스트 */}
+        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          {comments.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                border: "1px solid #eee",
+                borderRadius: 14,
+                padding: 12,
+                background: "#fff",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ fontWeight: 900 }}>{c.nickname ?? "unknown"}</div>
+                <div style={{ fontSize: 12, color: "#777", fontWeight: 700 }}>
+                  {new Date(c.created_at).toLocaleString()}
+                </div>
+
+                {/* 내 댓글이면 삭제 버튼 */}
+                {myUserId && Number(c.user_id) === Number(myUserId) && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = window.confirm("이 댓글을 삭제할까요?");
+                      if (!ok) return;
+                      try {
+                        await deleteDiaryComment(id, c.id);
+                        setComments((prev) =>
+                          prev.filter((x) => x.id !== c.id)
+                        );
+                      } catch (e) {
+                        console.error(e);
+                        alert("댓글 삭제 실패");
+                      }
+                    }}
+                    style={{
+                      marginLeft: "auto",
+                      border: "none",
+                      background: "transparent",
+                      color: "crimson",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    삭제
+                  </button>
+                )}
+              </div>
+
+              <div style={{ marginTop: 6, fontWeight: 700 }}>{c.content}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {viewerOpen && (

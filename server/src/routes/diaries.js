@@ -162,7 +162,11 @@ router.post("/:id/likes", async (req, res) => {
       [diaryId]
     );
 
-    return res.json({ ok: true, like_count: rows[0].like_count, liked: true });
+    return res.json({
+      ok: true,
+      like_count: rows[0].like_count,
+      my_liked: true,
+    });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "internal server error" });
@@ -224,17 +228,66 @@ router.get("/", async (req, res) => {
  * GET /api/diaries/:id
  * 상세 + photos 같이 내려주기
  */
+// router.get("/:id", async (req, res) => {
+//   try {
+//     const id = Number(req.params.id);
+//     if (!id) return res.status(400).json({ message: "invalid id" });
+
+//     const { rows } = await pool.query(
+//       `
+//       SELECT
+//         d.*,
+//         u.nickname,
+//         COALESCE(lc.like_count, 0) AS like_count
+//       FROM diaries d
+//       JOIN users u ON u.id = d.user_id
+//       LEFT JOIN (
+//         SELECT diary_id, COUNT(*)::int AS like_count
+//         FROM likes
+//         GROUP BY diary_id
+//       ) lc ON lc.diary_id = d.id
+//       WHERE d.id = $1
+//       `,
+//       [id]
+//     );
+
+//     if (!rows.length) return res.status(404).json({ message: "not found" });
+
+//     const diary = rows[0];
+
+//     const photoRes = await pool.query(
+//       `SELECT id, url FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC`,
+//       [id]
+//     );
+
+//     return res.json({ ...diary, photos: photoRes.rows });
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(500).json({ message: "internal server error" });
+//   }
+// });
+/**
+ * GET /api/diaries/:id?userId=123
+ * 상세 + nickname + like_count + my_liked + photos 같이 내려주기
+ */
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ message: "invalid id" });
+
+    const userId = req.query.userId ? Number(req.query.userId) : null;
 
     const { rows } = await pool.query(
       `
       SELECT
         d.*,
         u.nickname,
-        COALESCE(lc.like_count, 0) AS like_count
+        COALESCE(lc.like_count, 0) AS like_count,
+        CASE
+          WHEN $2::bigint IS NULL THEN false
+          WHEN ml.diary_id IS NULL THEN false
+          ELSE true
+        END AS my_liked
       FROM diaries d
       JOIN users u ON u.id = d.user_id
       LEFT JOIN (
@@ -242,9 +295,14 @@ router.get("/:id", async (req, res) => {
         FROM likes
         GROUP BY diary_id
       ) lc ON lc.diary_id = d.id
+      LEFT JOIN (
+        SELECT diary_id
+        FROM likes
+        WHERE user_id = $2
+      ) ml ON ml.diary_id = d.id
       WHERE d.id = $1
       `,
-      [id]
+      [id, userId]
     );
 
     if (!rows.length) return res.status(404).json({ message: "not found" });
@@ -252,7 +310,7 @@ router.get("/:id", async (req, res) => {
     const diary = rows[0];
 
     const photoRes = await pool.query(
-      `SELECT id, url FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC`,
+      "SELECT * FROM diary_photos WHERE diary_id=$1 ORDER BY id ASC",
       [id]
     );
 
@@ -282,31 +340,110 @@ router.get("/:id/photos", async (req, res) => {
 });
 
 /**
- * 좋아요 누가 눌렀는지 조회 (상세 진입 시)
+ * GET /api/diaries/:id/likes?userId=123
+ * 좋아요 상태 조회 (카운트 + 내가 눌렀는지)
  */
 router.get("/:id/likes", async (req, res) => {
   try {
     const diaryId = Number(req.params.id);
-    const userId = Number(req.query.userId);
+    const userId = req.query.userId ? Number(req.query.userId) : null;
 
-    const countRes = await pool.query(
-      `SELECT COUNT(*)::int AS like_count FROM likes WHERE diary_id=$1`,
+    if (!diaryId) {
+      return res.status(400).json({ message: "invalid diaryId" });
+    }
+
+    const { rows: cntRows } = await pool.query(
+      "SELECT COUNT(*)::int AS like_count FROM likes WHERE diary_id=$1",
       [diaryId]
     );
 
     let liked = false;
     if (userId) {
-      const likedRes = await pool.query(
-        `SELECT 1 FROM likes WHERE diary_id=$1 AND user_id=$2 LIMIT 1`,
+      const { rowCount } = await pool.query(
+        "SELECT 1 FROM likes WHERE diary_id=$1 AND user_id=$2 LIMIT 1",
         [diaryId, userId]
       );
-      liked = likedRes.rows.length > 0;
+      liked = rowCount > 0;
     }
 
-    res.json({ like_count: countRes.rows[0].like_count, liked });
+    return res.json({ like_count: cntRows[0].like_count, liked });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ message: "internal server error" });
+    return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
+ * GET /api/diaries/:id/comments
+ * 댓글 리스트 (닉네임 포함)
+ */
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    if (!diaryId) return res.status(400).json({ message: "invalid id" });
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        c.id,
+        c.diary_id,
+        c.user_id,
+        u.nickname,
+        c.content,
+        c.created_at
+      FROM comments c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.diary_id = $1
+      ORDER BY c.created_at ASC
+      `,
+      [diaryId]
+    );
+
+    return res.json(rows);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
+ * POST /api/diaries/:id/comments
+ * body: { user_id, content }
+ */
+router.post("/:id/comments", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const userId = Number(req.body.user_id);
+    const content = String(req.body.content ?? "").trim();
+
+    if (!diaryId || !userId) {
+      return res.status(400).json({ message: "invalid id" });
+    }
+    if (!content) return res.status(400).json({ message: "content required" });
+    if (content.length > 300)
+      return res.status(400).json({ message: "content too long (<=300)" });
+
+    const { rows } = await pool.query(
+      `
+      INSERT INTO comments (diary_id, user_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING id, diary_id, user_id, content, created_at
+      `,
+      [diaryId, userId, content]
+    );
+
+    // nickname 포함해서 내려주기
+    const nickRes = await pool.query("SELECT nickname FROM users WHERE id=$1", [
+      userId,
+    ]);
+
+    return res.status(201).json({
+      ...rows[0],
+      nickname: nickRes.rows[0]?.nickname ?? "unknown",
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "internal server error" });
   }
 });
 
@@ -454,7 +591,43 @@ router.delete("/:id/likes", async (req, res) => {
       [diaryId]
     );
 
-    return res.json({ ok: true, like_count: rows[0].like_count, liked: false });
+    return res.json({
+      ok: true,
+      like_count: rows[0].like_count,
+      my_liked: false,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "internal server error" });
+  }
+});
+
+/**
+ * DELETE /api/diaries/:id/comments/:commentId?userId=123
+ */
+router.delete("/:id/comments/:commentId", async (req, res) => {
+  try {
+    const diaryId = Number(req.params.id);
+    const commentId = Number(req.params.commentId);
+    const userId = Number(req.query.userId);
+
+    if (!diaryId || !commentId || !userId)
+      return res.status(400).json({ message: "invalid id" });
+
+    const r = await pool.query(
+      `
+      DELETE FROM comments
+      WHERE id=$1 AND diary_id=$2 AND user_id=$3
+      RETURNING id
+      `,
+      [commentId, diaryId, userId]
+    );
+
+    if (!r.rowCount) {
+      return res.status(403).json({ message: "cannot delete" });
+    }
+
+    return res.json({ ok: true });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "internal server error" });
