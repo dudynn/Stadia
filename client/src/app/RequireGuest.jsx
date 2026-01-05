@@ -67,7 +67,7 @@ export default function RequireGuest() {
         <input
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
-          placeholder="예: 골유뺌"
+          placeholder="닉네임을 입력해주세요!"
           style={styles.input}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !loading) submit();
