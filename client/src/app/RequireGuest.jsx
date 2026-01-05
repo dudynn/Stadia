@@ -60,7 +60,8 @@ export default function RequireGuest() {
       <div style={styles.modal}>
         <h2 style={{ margin: 0, fontSize: 20 }}>닉네임 설정</h2>
         <p style={{ marginTop: 8, color: "#555", lineHeight: 1.4 }}>
-          처음 한 번만 입력하면 돼. 나중에 마이페이지에서 바꿀 수도 있어!
+          닉네임은 처음 한 번만 입력하면 됩니다. 나중에 마이페이지에서 바꿀 수도
+          있습니다!
         </p>
 
         <input
@@ -82,7 +83,7 @@ export default function RequireGuest() {
         </button>
 
         <div style={{ marginTop: 10, fontSize: 12, color: "#777" }}>
-          * 지금은 게스트 모드야(1주차 MVP). 2주차에 로그인 추가 가능!
+          * 지금은 게스트 모드입니다.
         </div>
       </div>
     </div>
