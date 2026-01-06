@@ -148,17 +148,17 @@
 
 ### 소셜 기능 API
 
-- POST /api/diaries/:id/likes
-- DELETE /api/diaries/:id/likes
-- GET /api/diaries/:id/comments
-- POST /api/diaries/:id/comments
-- DELETE /api/diaries/:id/comments/:commentId
+- `POST /api/diaries/:id/likes`
+- `DELETE /api/diaries/:id/likes`
+- `GET /api/diaries/:id/comments`
+- `POST /api/diaries/:id/comments`
+- `DELETE /api/diaries/:id/comments/:commentId`
 
 ### 이미지 API
 
-- POST /api/diaries/:id/photos
-- GET /api/diaries/:id/photos
-- DELETE /api/diaries/:id/photos/:photoId
+- `POST /api/diaries/:id/photos`
+- `GET /api/diaries/:id/photos`
+- `DELETE /api/diaries/:id/photos/:photoId`
 
 ---
 
@@ -218,12 +218,12 @@
 
 ## 프로젝트 상태
 
-✔️ 직관 기록 CRUD (생성 / 조회 / 수정 / 삭제) 완료
-✔️ 야구 / 배구 종목 분리 및 경기 구조 설계 완료
-✔️ 경기 결과(승 · 패 · 무 / 스코어) 기록 기능 구현
-✔️ 이미지 업로드 및 확대 뷰어 기능 구현
-✔️ 공개 / 비공개 기록 분리 및 공개 피드 제공
-✔️ 다중 사용자 환경에서 닉네임 기반 기록 공유
-✔️ 좋아요 / 댓글 기능 1차 구현 완료
-🟡 UX 개선 및 정렬/통계 기능 고도화 예정
-🟡 지도 기능(KakaoMap) 보완 예정
+- ✔️ 직관 기록 CRUD (생성 / 조회 / 수정 / 삭제) 완료
+- ✔️ 야구 / 배구 종목 분리 및 경기 구조 설계 완료
+- ✔️ 경기 결과(승 · 패 · 무 / 스코어) 기록 기능 구현
+- ✔️ 이미지 업로드 및 확대 뷰어 기능 구현
+- ✔️ 공개 / 비공개 기록 분리 및 공개 피드 제공
+- ✔️ 다중 사용자 환경에서 닉네임 기반 기록 공유
+- ✔️ 좋아요 / 댓글 기능 1차 구현 완료
+- 🟡 UX 개선 및 정렬/통계 기능 고도화 예정
+- 🟡 지도 기능(KakaoMap) 보완 예정
