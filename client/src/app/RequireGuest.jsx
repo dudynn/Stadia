@@ -1,37 +1,36 @@
 import { useEffect, useState } from "react";
 import { loadGuestUser, saveGuestUser } from "../lib/auth";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
+function apiUrl(path) {
+  if (!API_BASE) throw new Error("VITE_API_URL is not set");
+  return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 export default function RequireGuest() {
   const [user, setUser] = useState(() => loadGuestUser());
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // 이미 로컬에 유저 있으면 닉네임 초기값 세팅
   useEffect(() => {
     if (user?.nickname) setNickname(user.nickname);
   }, [user]);
 
-  if (user?.id) return null; // 유저 있으면 아무것도 안 띄움
+  if (user?.id) return null;
 
   const submit = async () => {
     const name = nickname.trim();
 
-    if (!name) {
-      setErr("닉네임을 입력해주세요!");
-      return;
-    }
-
-    if (name.length > 30) {
-      setErr("닉네임은 30자 이내로 입력해주세요.");
-      return;
-    }
+    if (!name) return setErr("닉네임을 입력해주세요!");
+    if (name.length > 30) return setErr("닉네임은 30자 이내로 입력해주세요.");
 
     setLoading(true);
     setErr("");
 
     try {
-      const res = await fetch("/api/users/guest", {
+      const res = await fetch(apiUrl("/api/users/guest"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname: name }),
@@ -48,8 +47,8 @@ export default function RequireGuest() {
       saveGuestUser(saved);
       setUser(saved);
     } catch (e) {
-      setErr("서버 연결/요청에 실패했습니다. 서버가 켜져 있는지 확인해주세요");
       console.error(e);
+      setErr("서버 연결/요청에 실패했습니다. 서버가 켜져 있는지 확인해주세요");
     } finally {
       setLoading(false);
     }
@@ -101,7 +100,6 @@ const styles = {
     zIndex: 9999,
     padding: 16,
   },
-
   modal: {
     width: "100%",
     maxWidth: 420,
@@ -110,7 +108,6 @@ const styles = {
     padding: 18,
     boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
   },
-
   input: {
     width: "100%",
     boxSizing: "border-box",
@@ -121,7 +118,6 @@ const styles = {
     fontSize: 16,
     marginTop: 10,
   },
-
   button: {
     width: "100%",
     marginTop: 12,
@@ -133,8 +129,8 @@ const styles = {
     fontSize: 16,
     fontWeight: 700,
     cursor: "pointer",
+    opacity: 1,
   },
-
   error: {
     marginTop: 10,
     color: "crimson",

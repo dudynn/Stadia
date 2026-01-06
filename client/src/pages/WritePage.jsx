@@ -49,17 +49,6 @@ function toYYYYMMDD(dateLike) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const segBtn = (active) => ({
-  flex: 1,
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: active ? "none" : "1px solid #ddd",
-  background: active ? "#111" : "#fff",
-  color: active ? "#fff" : "#111",
-  fontWeight: 900,
-  cursor: "pointer",
-});
-
 export default function WritePage() {
   const nav = useNavigate();
   const { id } = useParams();
@@ -291,17 +280,17 @@ export default function WritePage() {
     <PageContainer>
       <h1 style={{ margin: 0 }}>{isEdit ? "기록 수정" : "기록 작성"}</h1>
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>공개 범위</label>
+      <div style={ui.card}>
+        <label style={ui.label}>공개 범위</label>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={ui.segWrap}>
           <button
             type="button"
             onClick={() => setVisibility("private")}
             style={{
               flex: 1,
               padding: "10px",
-              borderRadius: 10,
+              borderRadius: 12,
               border: visibility === "private" ? "none" : "1px solid #ddd",
               background: visibility === "private" ? "#111" : "#fff",
               color: visibility === "private" ? "#fff" : "#111",
@@ -317,7 +306,7 @@ export default function WritePage() {
             style={{
               flex: 1,
               padding: "10px",
-              borderRadius: 10,
+              borderRadius: 12,
               border: visibility === "public" ? "none" : "1px solid #ddd",
               background: visibility === "public" ? "#111" : "#fff",
               color: visibility === "public" ? "#fff" : "#111",
@@ -329,12 +318,12 @@ export default function WritePage() {
         </div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>종목</label>
+      <div style={ui.card}>
+        <label style={ui.label}>종목</label>
         <select
           value={sport}
           onChange={(e) => setSport(e.target.value)}
-          style={styles.select}
+          style={ui.select}
         >
           <option value="baseball">야구</option>
           <option value="volleyball">배구</option>
@@ -342,19 +331,19 @@ export default function WritePage() {
       </div>
 
       {sport === "baseball" ? (
-        <div style={{ marginTop: 14 }}>
-          <label style={styles.label}>팀 선택</label>
+        <div style={ui.card}>
+          <label style={ui.label}>팀 선택</label>
 
-          <div style={styles.haRow}>
-            <span style={styles.haTag_home}>HOME</span>
-            <span style={styles.haTag_away}>AWAY</span>
+          <div style={ui.haRow}>
+            <span style={ui.haTagHome}>HOME</span>
+            <span style={ui.haTagAway}>AWAY</span>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
             <select
               value={baseballHome}
               onChange={(e) => setBaseballHome(e.target.value)}
-              style={styles.select}
+              style={ui.select}
             >
               {BASEBALL_TEAMS.map((t) => (
                 <option key={t} value={t}>
@@ -372,7 +361,7 @@ export default function WritePage() {
             <select
               value={baseballAway}
               onChange={(e) => setBaseballAway(e.target.value)}
-              style={styles.select}
+              style={ui.select}
             >
               {BASEBALL_TEAMS.map((t) => (
                 <option key={t} value={t}>
@@ -383,39 +372,39 @@ export default function WritePage() {
           </div>
         </div>
       ) : (
-        <div style={{ marginTop: 14 }}>
-          <label style={styles.label}>배구 경기 구분</label>
+        <div style={ui.card}>
+          <label style={ui.label}>배구 경기 구분</label>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <div style={ui.segWrap}>
             <button
               type="button"
               onClick={() => setVGender("male")}
-              style={segBtn(vGender === "male")}
+              style={ui.segBtn(vGender === "male")}
             >
               남자배구
             </button>
             <button
               type="button"
               onClick={() => setVGender("female")}
-              style={segBtn(vGender === "female")}
+              style={ui.segBtn(vGender === "female")}
             >
               여자배구
             </button>
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <label style={styles.label}>팀 선택</label>
+            <label style={ui.label}>팀 선택</label>
 
-            <div style={styles.haRow}>
-              <span style={styles.haTag}>HOME</span>
-              <span style={styles.haTag}>AWAY</span>
+            <div style={ui.haRow}>
+              <span style={ui.haTagHome}>HOME</span>
+              <span style={ui.haTagAway}>AWAY</span>
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
               <select
                 value={vHome}
                 onChange={(e) => setVHome(e.target.value)}
-                style={styles.select}
+                style={ui.select}
               >
                 {vTeams.map((t) => (
                   <option key={t} value={t}>
@@ -433,7 +422,7 @@ export default function WritePage() {
               <select
                 value={vAway}
                 onChange={(e) => setVAway(e.target.value)}
-                style={styles.select}
+                style={ui.select}
               >
                 {vTeams.map((t) => (
                   <option key={t} value={t}>
@@ -446,47 +435,54 @@ export default function WritePage() {
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>날짜</label>
+      <div style={ui.card}>
+        <label style={ui.label}>날짜</label>
         <input
           type="date"
           value={gameDate}
           onChange={(e) => setGameDate(e.target.value)}
-          style={styles.input}
+          style={ui.input}
         />
       </div>
 
       {/* 경기 결과 */}
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>경기 결과</label>
+      <div style={ui.card}>
+        <label style={ui.label}>경기 결과</label>
 
         <div style={{ display: "flex", gap: 8 }}>
-          {["win", "lose", "draw", "unknown"].map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setResult(r)}
-              style={{
-                flex: 1,
-                padding: "10px",
-                borderRadius: 10,
-                border: result === r ? "none" : "1px solid #ddd",
-                background: result === r ? "#111" : "#fff",
-                color: result === r ? "#fff" : "#111",
-                fontWeight: 800,
-              }}
-            >
-              {r === "win" && "승"}
-              {r === "lose" && "패"}
-              {r === "draw" && "무"}
-              {r === "unknown" && "모름"}
-            </button>
-          ))}
+          {["win", "lose", "draw", "unknown"].map((r) => {
+            const isActive = result === r;
+            const s = resultBtnStyle[r];
+
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setResult(r)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 10,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  border: isActive ? "none" : `1px solid ${s.inactiveBorder}`,
+                  background: isActive ? s.activeBg : "#fff",
+                  color: isActive ? s.activeColor : s.inactiveColor,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {r === "win" && "승"}
+                {r === "lose" && "패"}
+                {r === "draw" && "무"}
+                {r === "unknown" && "모름"}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>스코어</label>
+      <div style={ui.card}>
+        <label style={ui.label}>스코어</label>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <input
@@ -494,7 +490,7 @@ export default function WritePage() {
             value={scoreHome}
             onChange={(e) => setScoreHome(e.target.value)}
             placeholder="HOME"
-            style={styles.input}
+            style={ui.input}
           />
 
           <input
@@ -502,16 +498,16 @@ export default function WritePage() {
             value={scoreAway}
             onChange={(e) => setScoreAway(e.target.value)}
             placeholder="AWAY"
-            style={styles.input}
+            style={ui.input}
           />
         </div>
       </div>
 
       {/* 장소: 목록/직접입력 */}
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>장소</label>
+      <div style={ui.card}>
+        <label style={ui.label}>장소</label>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+        <div style={ui.segWrap}>
           <button
             type="button"
             onClick={() => {
@@ -520,7 +516,7 @@ export default function WritePage() {
               setStadiumSelect(first);
               setVenueName(first);
             }}
-            style={segBtn(stadiumMode === "select")}
+            style={ui.segBtn(stadiumMode === "select")}
           >
             목록에서 선택
           </button>
@@ -531,7 +527,7 @@ export default function WritePage() {
               setStadiumSelect("");
               setVenueName("");
             }}
-            style={segBtn(stadiumMode === "custom")}
+            style={ui.segBtn(stadiumMode === "custom")}
           >
             직접 입력
           </button>
@@ -544,7 +540,7 @@ export default function WritePage() {
               setStadiumSelect(e.target.value);
               setVenueName(e.target.value);
             }}
-            style={styles.select}
+            style={ui.select}
           >
             {stadiumList.map((s) => (
               <option key={s} value={s}>
@@ -556,23 +552,23 @@ export default function WritePage() {
           <input
             value={venueName}
             onChange={(e) => setVenueName(e.target.value)}
-            style={styles.input}
+            style={ui.input}
           />
         )}
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>한 줄 소감</label>
+      <div style={ui.card}>
+        <label style={ui.label}>한 줄 소감</label>
         <input
           value={oneLiner}
           onChange={(e) => setOneLiner(e.target.value)}
           placeholder="120자 이하"
-          style={styles.input}
+          style={ui.input}
         />
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <label style={styles.label}>사진 (최대 3장)</label>
+      <div style={ui.card}>
+        <label style={ui.label}>사진 (최대 3장)</label>
 
         {/* 기존 사진 (수정 모드) */}
         {isEdit && existingPhotos.length > 0 && (
@@ -688,19 +684,7 @@ export default function WritePage() {
       <button
         onClick={onSubmit}
         disabled={saving}
-        style={{
-          marginTop: 16,
-          width: "100%",
-          padding: "12px 12px",
-          borderRadius: 12,
-          border: "none",
-          background: "#111",
-          color: "#fff",
-          fontSize: 16,
-          fontWeight: 800,
-          cursor: "pointer",
-          opacity: saving ? 0.7 : 1,
-        }}
+        style={ui.primaryBtn(saving)}
       >
         {saving ? "저장 중..." : isEdit ? "수정 저장" : "저장하기"}
       </button>
@@ -708,16 +692,108 @@ export default function WritePage() {
   );
 }
 
-const styles = {
-  label: { display: "block", fontWeight: 800, marginBottom: 6 },
+// const styles = {
+//   label: { display: "block", fontWeight: 800, marginBottom: 6 },
+
+//   input: {
+//     width: "100%",
+//     boxSizing: "border-box",
+//     padding: "10px 12px",
+//     borderRadius: 12,
+//     border: "1px solid #ddd",
+//     outline: "none",
+//   },
+
+//   select: {
+//     width: "100%",
+//     boxSizing: "border-box",
+//     padding: "10px 12px",
+//     borderRadius: 12,
+//     border: "1px solid #ddd",
+//     background: "#fff",
+//   },
+
+//   haRow: {
+//     display: "flex",
+//     justifyContent: "space-between",
+//     marginBottom: 6,
+//     padding: "0 6px",
+//   },
+
+//   haTag_away: {
+//     fontSize: 10,
+//     fontWeight: 900,
+//     color: "#444",
+//     letterSpacing: "0.6px",
+//     background: "#f3f4f6",
+//     border: "1px solid #e5e7eb",
+//     padding: "3px 8px",
+//     borderRadius: 999,
+//   },
+
+//   haTag_home: {
+//     fontSize: 10,
+//     fontWeight: 900,
+//     color: "#f3f4f6",
+//     letterSpacing: "0.6px",
+//     background: "#444",
+//     border: "1px solid #e5e7eb",
+//     padding: "3px 8px",
+//     borderRadius: 999,
+//   },
+// };
+
+// const resultBtnStyle = {
+//   win: {
+//     activeBg: "#2563eb",
+//     activeColor: "#fff",
+//     inactiveBorder: "#2563eb",
+//     inactiveColor: "#2563eb",
+//   },
+
+//   lose: {
+//     activeBg: "#dc2626",
+//     activeColor: "#fff",
+//     inactiveBorder: "#dc2626",
+//     inactiveColor: "#dc2626",
+//   },
+
+//   draw: {
+//     activeBg: "#6b7280",
+//     activeColor: "#fff",
+//     inactiveBorder: "#6b7280",
+//     inactiveColor: "#6b7280",
+//   },
+
+//   unknown: {
+//     activeBg: "#111827",
+//     activeColor: "#fff",
+//     inactiveBorder: "#d1d5db",
+//     inactiveColor: "#111827",
+//   },
+// };
+
+const ui = {
+  card: {
+    border: "1px solid #eee",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 12,
+    background: "#fff",
+    boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
+  },
+
+  label: { display: "block", fontWeight: 900, marginBottom: 6, color: "#111" },
 
   input: {
     width: "100%",
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid #ddd",
+    border: "1px solid #e5e7eb",
     outline: "none",
+    background: "#fff",
+    fontWeight: 800,
   },
 
   select: {
@@ -725,36 +801,104 @@ const styles = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid #ddd",
+    border: "1px solid #e5e7eb",
     background: "#fff",
+    fontWeight: 800,
   },
 
+  // 세그먼트 래퍼
+  segWrap: {
+    display: "inline-flex",
+    width: "100%",
+    border: "1px solid #eee",
+    background: "#f6f6f6",
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+  },
+
+  // 세그먼트 버튼
+  segBtn: (active) => ({
+    flex: 1,
+    border: "none",
+    borderRadius: 999,
+    padding: "10px 12px",
+    fontSize: 13,
+    fontWeight: 900,
+    cursor: "pointer",
+    background: active ? "#111" : "transparent",
+    color: active ? "#fff" : "#444",
+    boxShadow: active ? "0 6px 16px rgba(0,0,0,0.10)" : "none",
+  }),
+
+  // 메인 CTA
+  primaryBtn: (disabled) => ({
+    marginTop: 16,
+    width: "100%",
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 900,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.7 : 1,
+  }),
+
+  // 홈/원정 태그
   haRow: {
     display: "flex",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
     padding: "0 6px",
   },
-
-  haTag_away: {
+  haTagHome: {
     fontSize: 10,
     fontWeight: 900,
-    color: "#444",
+    color: "#fff",
+    letterSpacing: "0.6px",
+    background: "#111",
+    border: "1px solid #111",
+    padding: "4px 10px",
+    borderRadius: 999,
+  },
+  haTagAway: {
+    fontSize: 10,
+    fontWeight: 900,
+    color: "#111",
     letterSpacing: "0.6px",
     background: "#f3f4f6",
     border: "1px solid #e5e7eb",
-    padding: "3px 8px",
+    padding: "4px 10px",
     borderRadius: 999,
   },
+};
 
-  haTag_home: {
-    fontSize: 10,
-    fontWeight: 900,
-    color: "#f3f4f6",
-    letterSpacing: "0.6px",
-    background: "#444",
-    border: "1px solid #e5e7eb",
-    padding: "3px 8px",
-    borderRadius: 999,
+// 결과 버튼 전용(승/패/무/모름) - HomePage의 resultStyle 톤
+const resultBtnStyle = {
+  win: {
+    activeBg: "#2563eb",
+    activeColor: "#fff",
+    inactiveBorder: "rgba(37,99,235,0.25)",
+    inactiveColor: "#2563eb",
+  },
+  lose: {
+    activeBg: "#dc2626",
+    activeColor: "#fff",
+    inactiveBorder: "rgba(220,38,38,0.25)",
+    inactiveColor: "#dc2626",
+  },
+  draw: {
+    activeBg: "#6b7280",
+    activeColor: "#fff",
+    inactiveBorder: "rgba(107,114,128,0.25)",
+    inactiveColor: "#6b7280",
+  },
+  unknown: {
+    activeBg: "#111",
+    activeColor: "#fff",
+    inactiveBorder: "#e5e7eb",
+    inactiveColor: "#111",
   },
 };

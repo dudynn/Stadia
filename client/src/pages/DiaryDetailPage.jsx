@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteDiaryById, fetchDiaryById } from "../lib/api.js";
-import KakaoMapByKeyword from "../components/KakaoMapByKeyword.jsx";
 import PageContainer from "../components/PageContainer.jsx";
+
+import { deleteDiaryById, fetchDiaryById } from "../lib/api.js";
 import {
   fetchDiaryPhotos,
   fetchDiaryLikes,
   likeDiary,
   unlikeDiary,
-} from "../lib/api.js";
-import {
   fetchDiaryComments,
   createDiaryComment,
   deleteDiaryComment,
@@ -23,6 +21,16 @@ function formatDate(dateLike) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}.${mm}.${dd}`;
+}
+
+// 지도 섹션 대신 링크 대체
+function openMapLink(place) {
+  const q = encodeURIComponent(place || "");
+  return {
+    kakao: `https://map.kakao.com/link/search/${q}`,
+    naver: `https://map.naver.com/v5/search/${q}`,
+    google: `https://www.google.com/maps/search/?api=1&query=${q}`,
+  };
 }
 
 export default function DiaryDetailPage() {
@@ -146,15 +154,13 @@ export default function DiaryDetailPage() {
     }
   };
 
-  if (loading) {
-    return <div style={{ padding: 24 }}>불러오는 중...</div>;
-  }
+  if (loading) return <div style={{ padding: 24 }}>불러오는 중...</div>;
 
   if (err || !data) {
     return (
       <div style={{ padding: 24 }}>
         <div style={{ color: "crimson" }}>{err || "데이터 없음"}</div>
-        <button onClick={() => nav(-1)} style={btnOutline}>
+        <button onClick={() => nav(-1)} style={ui.btnOutline}>
           뒤로가기
         </button>
       </div>
@@ -163,13 +169,13 @@ export default function DiaryDetailPage() {
 
   return (
     <PageContainer>
-      <button onClick={() => nav(-1)} style={btnOutline}>
+      <button onClick={() => nav(-1)} style={ui.btnOutline}>
         ← 뒤로
       </button>
 
       <h1 style={{ margin: "12px 0 0" }}>기록 상세</h1>
 
-      <div style={card}>
+      <div style={ui.card}>
         <div style={{ fontSize: 22, fontWeight: 900 }}>
           {data.team_home}
           {data.team_away ? (
@@ -180,12 +186,14 @@ export default function DiaryDetailPage() {
             </>
           ) : null}
 
-          {/* 경기 결과 */}
           {data.result !== "unknown" && (
             <div style={{ marginTop: 10, fontSize: 14, fontWeight: 900 }}>
-              결과: {data.result === "win" && "승"}
-              {data.result === "lose" && "패"}
-              {data.result === "draw" && "무"}
+              결과:{" "}
+              <span style={ui.resultPill(data.result)}>
+                {data.result === "win" && "승"}
+                {data.result === "lose" && "패"}
+                {data.result === "draw" && "무"}
+              </span>
               {data.score_home !== null && data.score_away !== null && (
                 <>
                   {" "}
@@ -208,13 +216,7 @@ export default function DiaryDetailPage() {
                       setViewerSrc(encodeURI(p.url));
                       setViewerOpen(true);
                     }}
-                    style={{
-                      width: 120,
-                      height: 120,
-                      objectFit: "cover",
-                      borderRadius: 14,
-                      cursor: "zoom-in",
-                    }}
+                    style={ui.photoThumb}
                   />
                 ))}
               </div>
@@ -233,20 +235,60 @@ export default function DiaryDetailPage() {
         </div>
       </div>
 
+      {/* 장소 링크 */}
       <div style={{ marginTop: 14 }}>
-        <div style={{ fontWeight: 900, marginBottom: 8 }}>지도</div>
-        <KakaoMapByKeyword keyword={data.venue_name} />
+        <div style={{ fontWeight: 900, marginBottom: 8 }}>장소</div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a
+            href={openMapLink(data.venue_name).naver}
+            target="_blank"
+            rel="noreferrer"
+            style={ui.linkBtn}
+            onMouseEnter={(e) =>
+              Object.assign(e.currentTarget.style, mapHover.naver)
+            }
+            onMouseLeave={(e) =>
+              Object.assign(e.currentTarget.style, ui.linkBtn)
+            }
+          >
+            📍 네이버지도
+          </a>
+
+          <a
+            href={openMapLink(data.venue_name).kakao}
+            target="_blank"
+            rel="noreferrer"
+            style={ui.linkBtn}
+            onMouseEnter={(e) =>
+              Object.assign(e.currentTarget.style, mapHover.kakao)
+            }
+            onMouseLeave={(e) =>
+              Object.assign(e.currentTarget.style, ui.linkBtn)
+            }
+          >
+            📍 카카오맵
+          </a>
+
+          <a
+            href={openMapLink(data.venue_name).google}
+            target="_blank"
+            rel="noreferrer"
+            style={ui.linkBtn}
+            onMouseEnter={(e) =>
+              Object.assign(e.currentTarget.style, mapHover.google)
+            }
+            onMouseLeave={(e) =>
+              Object.assign(e.currentTarget.style, ui.linkBtn)
+            }
+          >
+            📍 구글맵
+          </a>
+        </div>
       </div>
 
-      {/* 좋아요 버튼 */}
-      <div
-        style={{
-          marginTop: 10,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
+      {/* 좋아요 */}
+      <div style={ui.row}>
         <div style={{ fontSize: 13, fontWeight: 900, color: "#555" }}>
           작성자: {data.nickname ?? "?"}
         </div>
@@ -263,29 +305,25 @@ export default function DiaryDetailPage() {
               alert("좋아요 처리 실패");
             }
           }}
-          style={{
-            marginLeft: "auto",
-            padding: "8px 10px",
-            borderRadius: 999,
-            border: "1px solid #ddd",
-            background: liked ? "#111" : "#fff",
-            color: liked ? "#fff" : "#111",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
+          style={ui.likeBtn(liked)}
         >
           {liked ? "♥" : "♡"} 좋아요 {likeCount}
         </button>
       </div>
 
+      {/* 수정/삭제 */}
       <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-        <button onClick={() => nav(`/write/${id}`)} style={styles.edit}>
+        <button onClick={() => nav(`/write/${id}`)} style={ui.editBtn}>
           수정
         </button>
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <button onClick={onDelete} disabled={deleting} style={btnDanger}>
+        <button
+          onClick={onDelete}
+          disabled={deleting}
+          style={ui.btnDanger(deleting)}
+        >
           {deleting ? "삭제 중..." : "삭제"}
         </button>
       </div>
@@ -296,19 +334,12 @@ export default function DiaryDetailPage() {
           댓글 {comments.length}
         </div>
 
-        {/* 작성 */}
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="댓글을 입력하세요 (최대 300자)"
-            style={{
-              flex: 1,
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid #ddd",
-              outline: "none",
-            }}
+            style={ui.input}
           />
           <button
             type="button"
@@ -330,41 +361,21 @@ export default function DiaryDetailPage() {
                 setCommentLoading(false);
               }
             }}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "none",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 900,
-              cursor: "pointer",
-              opacity: commentLoading ? 0.7 : 1,
-              whiteSpace: "nowrap",
-            }}
+            style={ui.primaryBtn(commentLoading)}
           >
             {commentLoading ? "등록중" : "등록"}
           </button>
         </div>
 
-        {/* 리스트 */}
         <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
           {comments.map((c) => (
-            <div
-              key={c.id}
-              style={{
-                border: "1px solid #eee",
-                borderRadius: 14,
-                padding: 12,
-                background: "#fff",
-              }}
-            >
+            <div key={c.id} style={ui.commentCard}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ fontWeight: 900 }}>{c.nickname ?? "unknown"}</div>
                 <div style={{ fontSize: 12, color: "#777", fontWeight: 700 }}>
                   {new Date(c.created_at).toLocaleString()}
                 </div>
 
-                {/* 내 댓글이면 삭제 버튼 */}
                 {myUserId && Number(c.user_id) === Number(myUserId) && (
                   <button
                     type="button"
@@ -381,14 +392,7 @@ export default function DiaryDetailPage() {
                         alert("댓글 삭제 실패");
                       }
                     }}
-                    style={{
-                      marginLeft: "auto",
-                      border: "none",
-                      background: "transparent",
-                      color: "crimson",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
+                    style={ui.btnGhostDanger}
                   >
                     삭제
                   </button>
@@ -407,28 +411,13 @@ export default function DiaryDetailPage() {
             setViewerOpen(false);
             setViewerSrc("");
           }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.75)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 9999,
-          }}
+          style={ui.viewerBackdrop}
         >
           <img
             src={viewerSrc}
             alt=""
-            onClick={(e) => e.stopPropagation()} // 이미지 클릭은 닫히지 않게
-            style={{
-              maxWidth: "95vw",
-              maxHeight: "85vh",
-              objectFit: "contain",
-              borderRadius: 14,
-              background: "#000",
-            }}
+            onClick={(e) => e.stopPropagation()}
+            style={ui.viewerImage}
           />
 
           <button
@@ -438,18 +427,7 @@ export default function DiaryDetailPage() {
               setViewerOpen(false);
               setViewerSrc("");
             }}
-            style={{
-              position: "fixed",
-              top: 14,
-              right: 14,
-              border: "none",
-              borderRadius: 999,
-              padding: "10px 12px",
-              fontWeight: 900,
-              background: "rgba(255,255,255,0.15)",
-              color: "#fff",
-              cursor: "pointer",
-            }}
+            style={ui.viewerClose}
           >
             ✕
           </button>
@@ -459,41 +437,201 @@ export default function DiaryDetailPage() {
   );
 }
 
-const card = {
-  border: "1px solid #eee",
-  borderRadius: 18,
-  padding: 16,
-  marginTop: 12,
-  background: "#fff",
-};
+const ui = {
+  card: {
+    border: "1px solid #eee",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 12,
+    background: "#fff",
+    boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
+  },
 
-const btnOutline = {
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: "1px solid #ddd",
-  background: "#fff",
-  cursor: "pointer",
-};
+  btnOutline: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    background: "#fff",
+    cursor: "pointer",
+    fontWeight: 900,
+    color: "#111",
+  },
 
-const btnDanger = {
-  width: "100%",
-  padding: "12px 12px",
-  borderRadius: 12,
-  border: "none",
-  background: "crimson",
-  color: "#fff",
-  fontSize: 16,
-  fontWeight: 900,
-  cursor: "pointer",
-};
+  row: {
+    marginTop: 10,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
 
-const styles = {
-  edit: {
+  btnDanger: (disabled) => ({
+    width: "100%",
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#dc2626",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 900,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.7 : 1,
+  }),
+
+  btnGhostDanger: {
+    marginLeft: "auto",
+    border: "none",
+    background: "transparent",
+    color: "#dc2626",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+
+  likeBtn: (liked) => ({
+    marginLeft: "auto",
+    padding: "8px 12px",
+    borderRadius: 999,
+    border: "1px solid #e5e7eb",
+    background: liked ? "#111" : "#fff",
+    color: liked ? "#fff" : "#111",
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: liked ? "0 6px 16px rgba(0,0,0,0.10)" : "none",
+  }),
+
+  editBtn: {
     flex: 1,
     padding: "12px",
     borderRadius: 12,
-    border: "1px solid #ddd",
+    border: "1px solid #e5e7eb",
     background: "#fff",
-    fontWeight: 700,
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+
+  linkBtn: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    background: "#fff",
+    fontWeight: 900,
+    color: "#111",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  input: {
+    flex: 1,
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    outline: "none",
+    fontWeight: 800,
+    background: "#fff",
+  },
+
+  primaryBtn: (disabled) => ({
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontWeight: 900,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.7 : 1,
+    whiteSpace: "nowrap",
+  }),
+
+  commentCard: {
+    border: "1px solid #eee",
+    borderRadius: 16,
+    padding: 12,
+    background: "#fff",
+  },
+
+  resultPill: (r) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "2px 8px",
+    borderRadius: 999,
+    fontWeight: 900,
+    ...(resultChip[r] ?? {}),
+  }),
+
+  photoThumb: {
+    width: 120,
+    height: 120,
+    objectFit: "cover",
+    borderRadius: 14,
+    cursor: "zoom-in",
+  },
+
+  viewerBackdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    zIndex: 9999,
+  },
+
+  viewerImage: {
+    maxWidth: "95vw",
+    maxHeight: "85vh",
+    objectFit: "contain",
+    borderRadius: 14,
+    background: "#000",
+  },
+
+  viewerClose: {
+    position: "fixed",
+    top: 14,
+    right: 14,
+    border: "none",
+    borderRadius: 999,
+    padding: "10px 12px",
+    fontWeight: 900,
+    background: "rgba(255,255,255,0.15)",
+    color: "#fff",
+    cursor: "pointer",
+  },
+};
+
+const resultChip = {
+  win: {
+    color: "#2563eb",
+    background: "rgba(37,99,235,0.10)",
+    border: "1px solid rgba(37,99,235,0.25)",
+  },
+  lose: {
+    color: "#dc2626",
+    background: "rgba(220,38,38,0.10)",
+    border: "1px solid rgba(220,38,38,0.25)",
+  },
+  draw: {
+    color: "#6b7280",
+    background: "rgba(107,114,128,0.12)",
+    border: "1px solid rgba(107,114,128,0.22)",
+  },
+};
+
+const mapHover = {
+  kakao: {
+    background: "#fee500",
+    border: "1px solid #fee500",
+    color: "#000",
+  },
+  naver: {
+    background: "#03c75a",
+    border: "1px solid #03c75a",
+    color: "#fff",
+  },
+  google: {
+    background: "#f29900",
+    border: "1px solid #f29900",
+    color: "#fff",
   },
 };

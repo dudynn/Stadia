@@ -16,7 +16,6 @@ function pickExisting(favorites, { sport, gender }) {
 export default function FavoritePage() {
   const nav = useNavigate();
 
-  // 초기 선택값
   const [baseballTeam, setBaseballTeam] = useState(BASEBALL_TEAMS[0]);
   const [menTeam, setMenTeam] = useState("없음");
   const [womenTeam, setWomenTeam] = useState("없음");
@@ -35,7 +34,6 @@ export default function FavoritePage() {
         setErr("");
         const favs = await fetchMyFavorites();
 
-        // 기존 저장된 값이 있으면 화면에 반영
         const b = pickExisting(favs, { sport: "baseball", gender: "none" });
         const m = pickExisting(favs, { sport: "volleyball", gender: "male" });
         const w = pickExisting(favs, { sport: "volleyball", gender: "female" });
@@ -43,7 +41,7 @@ export default function FavoritePage() {
         if (!alive) return;
 
         if (b) setBaseballTeam(b);
-        if (m) setMenTeam(m === "none" ? "없음" : m); // 혹시 DB에 none 저장했을 경우
+        if (m) setMenTeam(m === "none" ? "없음" : m);
         if (w) setWomenTeam(w === "none" ? "없음" : w);
       } catch (e) {
         console.error(e);
@@ -71,14 +69,12 @@ export default function FavoritePage() {
     setSaving(true);
 
     try {
-      // 1) 야구 저장(항상 1개)
       await saveFavorite({
         sport: "baseball",
         gender: "none",
         team_code: baseballTeam,
       });
 
-      // 2) 배구 남/여는 "없음" 선택 가능
       await saveFavorite({
         sport: "volleyball",
         gender: "male",
@@ -92,7 +88,6 @@ export default function FavoritePage() {
       });
 
       setMsg("저장 완료!");
-      // 저장 후 마이페이지로 보내도 되고, 여기서 머물러도 됨
       setTimeout(() => nav("/mypage"), 500);
     } catch (e) {
       console.error(e);
@@ -104,19 +99,33 @@ export default function FavoritePage() {
 
   return (
     <PageContainer>
-      <h1 style={{ margin: 0 }}>응원팀 설정</h1>
+      {/* 헤더 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <h1 style={{ margin: 0, flex: 1 }}>응원팀 설정</h1>
+        <button onClick={() => nav(-1)} style={ui.btnOutline}>
+          ← 뒤로
+        </button>
+      </div>
 
       {loading ? (
-        <div style={{ marginTop: 14 }}>불러오는 중...</div>
+        <div style={{ marginTop: 14, color: "#666", fontWeight: 800 }}>
+          불러오는 중...
+        </div>
       ) : (
         <>
-          <section style={{ marginTop: 16 }}>
-            <div style={styles.sectionTitle}>야구</div>
-            <div style={{ marginTop: 8 }}>
+          {/* 야구 */}
+          <div style={{ marginTop: 16, ...ui.card }}>
+            <div style={ui.cardTitleRow}>
+              <div style={ui.cardTitle}>⚾️ 야구</div>
+              <span style={ui.badge}>1개 선택</span>
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <label style={ui.label}>응원팀</label>
               <select
                 value={baseballTeam}
                 onChange={(e) => setBaseballTeam(e.target.value)}
-                style={styles.select}
+                style={ui.select}
               >
                 {BASEBALL_TEAMS.map((t) => (
                   <option key={t} value={t}>
@@ -124,21 +133,26 @@ export default function FavoritePage() {
                   </option>
                 ))}
               </select>
+              <div style={ui.hint}>10개 팀 중 1개 선택</div>
             </div>
-            <div style={styles.hint}>10개 팀 중 1개 선택</div>
-          </section>
+          </div>
 
-          <section style={{ marginTop: 22 }}>
-            <div style={styles.sectionTitle}>배구</div>
+          {/* 배구 */}
+          <div style={{ marginTop: 12, ...ui.card }}>
+            <div style={ui.cardTitleRow}>
+              <div style={ui.cardTitle}>🏐 배구</div>
+              <span style={ui.badge}>남/여 각각</span>
+            </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
               <div style={{ flex: 1 }}>
-                <div style={styles.subTitle}>남자배구</div>
+                <label style={ui.label}>남자배구</label>
                 <select
                   value={menTeam}
                   onChange={(e) => setMenTeam(e.target.value)}
-                  style={styles.select}
+                  style={ui.select}
                 >
+                  <option value="없음">없음</option>
                   {V_LEAGUE_MEN.map((t) => (
                     <option key={t} value={t}>
                       {t}
@@ -148,12 +162,13 @@ export default function FavoritePage() {
               </div>
 
               <div style={{ flex: 1 }}>
-                <div style={styles.subTitle}>여자배구</div>
+                <label style={ui.label}>여자배구</label>
                 <select
                   value={womenTeam}
                   onChange={(e) => setWomenTeam(e.target.value)}
-                  style={styles.select}
+                  style={ui.select}
                 >
+                  <option value="없음">없음</option>
                   {V_LEAGUE_WOMEN.map((t) => (
                     <option key={t} value={t}>
                       {t}
@@ -163,48 +178,47 @@ export default function FavoritePage() {
               </div>
             </div>
 
-            <div style={styles.hint}>남/여 각각 선택 가능합니다.</div>
-          </section>
+            <div style={ui.hint}>남/여 각각 선택 가능합니다.</div>
+          </div>
 
-          <section
-            style={{
-              marginTop: 18,
-              padding: 14,
-              border: "1px solid #eee",
-              borderRadius: 14,
-            }}
-          >
-            <div style={{ fontWeight: 900, marginBottom: 8 }}>미리보기</div>
-            <div style={{ color: "#444" }}>
-              야구: <b>{preview.baseball}</b>
+          {/* 미리보기 */}
+          <div style={{ marginTop: 12, ...ui.card }}>
+            <div style={ui.cardTitleRow}>
+              <div style={ui.cardTitle}>미리보기</div>
+              <span style={ui.badgeLight}>저장 전 확인</span>
             </div>
-            <div style={{ color: "#444", marginTop: 6 }}>
-              배구(남): <b>{preview.volleyball.men}</b>
-            </div>
-            <div style={{ color: "#444", marginTop: 6 }}>
-              배구(여): <b>{preview.volleyball.women}</b>
-            </div>
-          </section>
 
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              <div style={ui.previewRow}>
+                <span style={ui.previewLabel}>야구</span>
+                <span style={ui.previewPill}>{preview.baseball}</span>
+              </div>
+
+              <div style={ui.previewRow}>
+                <span style={ui.previewLabel}>배구(남)</span>
+                <span style={ui.previewPill}>{preview.volleyball.men}</span>
+              </div>
+
+              <div style={ui.previewRow}>
+                <span style={ui.previewLabel}>배구(여)</span>
+                <span style={ui.previewPill}>{preview.volleyball.women}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 메시지 */}
           {err && <div style={{ marginTop: 12, color: "crimson" }}>{err}</div>}
-          {msg && <div style={{ marginTop: 12, color: "green" }}>{msg}</div>}
+          {msg && (
+            <div style={{ marginTop: 12, color: "#16a34a", fontWeight: 900 }}>
+              {msg}
+            </div>
+          )}
 
+          {/* 저장 버튼 */}
           <button
             onClick={onSave}
             disabled={saving}
-            style={{
-              marginTop: 16,
-              width: "100%",
-              padding: "12px 12px",
-              borderRadius: 12,
-              border: "none",
-              background: "#111",
-              color: "#fff",
-              fontSize: 16,
-              fontWeight: 900,
-              cursor: "pointer",
-              opacity: saving ? 0.7 : 1,
-            }}
+            style={ui.primaryBtn(saving)}
           >
             {saving ? "저장 중..." : "저장하기"}
           </button>
@@ -214,16 +228,131 @@ export default function FavoritePage() {
   );
 }
 
-const styles = {
-  sectionTitle: { fontSize: 18, fontWeight: 900 },
-  subTitle: { fontSize: 13, fontWeight: 800, color: "#444", marginBottom: 6 },
-  hint: { marginTop: 8, fontSize: 12, color: "#666" },
+const ui = {
+  card: {
+    border: "1px solid #eee",
+    borderRadius: 18,
+    padding: 16,
+    background: "#fff",
+    boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
+  },
+
+  cardTitleRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 900,
+    color: "#111",
+  },
+
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    border: "1px solid #e5e7eb",
+    background: "#f6f6f6",
+    color: "#111",
+  },
+
+  badgeLight: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    border: "1px solid #eee",
+    background: "#fafafa",
+    color: "#444",
+  },
+
+  label: {
+    display: "block",
+    fontWeight: 900,
+    marginBottom: 6,
+    color: "#111",
+    fontSize: 13,
+  },
+
+  hint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#666",
+    fontWeight: 700,
+  },
+
   select: {
     width: "100%",
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid #ddd",
+    border: "1px solid #e5e7eb",
     background: "#fff",
+    fontWeight: 800,
+    outline: "none",
+  },
+
+  previewRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    padding: "10px 12px",
+    borderRadius: 14,
+    border: "1px solid #eee",
+    background: "#fff",
+  },
+
+  previewLabel: {
+    fontWeight: 900,
+    color: "#444",
+    fontSize: 13,
+  },
+
+  previewPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontWeight: 900,
+    border: "1px solid #e5e7eb",
+    background: "#f6f6f6",
+    color: "#111",
+    maxWidth: "70%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  primaryBtn: (disabled) => ({
+    marginTop: 16,
+    width: "100%",
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 900,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.7 : 1,
+  }),
+
+  btnOutline: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    background: "#fff",
+    cursor: "pointer",
+    fontWeight: 900,
+    color: "#111",
   },
 };

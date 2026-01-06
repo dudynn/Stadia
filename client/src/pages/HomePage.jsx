@@ -114,7 +114,14 @@ function DiaryCard({ d, onClick }) {
 
       {/* 경기 결과 */}
       {d.result !== "unknown" && (
-        <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800 }}>
+        <div
+          style={{
+            marginTop: 6,
+            fontSize: 13,
+            fontWeight: 800,
+            ...resultStyle[d.result],
+          }}
+        >
           {d.result === "win" && "승"}
           {d.result === "lose" && "패"}
           {d.result === "draw" && "무"}
@@ -164,7 +171,7 @@ export default function HomePage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [feed, setFeed] = useState("private"); // "private" | "public"
+  const [feed, setFeed] = useState("mine"); // "mine" | "public"
 
   useEffect(() => {
     let alive = true;
@@ -173,10 +180,12 @@ export default function HomePage() {
       try {
         setLoading(true);
         setErr("");
+
         const data =
           feed === "mine"
-            ? await fetchMyDiaries({ sport })
-            : await fetchDiaries({ sport, visibility: "public" });
+            ? await fetchMyDiaries({ sport }) // 내 기록: public/private 전부
+            : await fetchDiaries({ sport, visibility: "public" }); // 공개 피드만
+
         if (alive) setItems(data);
       } catch (e) {
         console.error(e);
@@ -189,13 +198,13 @@ export default function HomePage() {
     return () => {
       alive = false;
     };
-  }, [sport]);
+  }, [sport, feed]);
 
   return (
     <PageContainer>
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <h1 style={{ margin: 0, flex: 1 }}>Stadia Diary</h1>
+        <h1 style={{ marginTop: 15, fontSize: 20, flex: 1 }}>Stadia Diary</h1>
 
         {/* 탭 느낌 (select 대신 버튼형) */}
         <div style={tabWrap}>
@@ -261,13 +270,13 @@ const cardWrap = {
   marginBottom: 12,
   background: "#fff",
   cursor: "pointer",
-  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+  boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
 };
 
 const tabWrap = {
   display: "inline-flex",
   border: "1px solid #eee",
-  background: "#fafafa",
+  background: "#f6f6f6",
   borderRadius: 999,
   padding: 4,
   gap: 4,
@@ -282,4 +291,40 @@ const tabBtn = (active) => ({
   cursor: "pointer",
   background: active ? "#111" : "transparent",
   color: active ? "#fff" : "#444",
+  boxShadow: active ? "0 6px 16px rgba(0,0,0,0.10)" : "none",
 });
+
+const resultStyle = {
+  win: {
+    color: "#2563eb",
+    background: "rgba(37,99,235,0.10)",
+    border: "1px solid rgba(37,99,235,0.25)",
+    padding: "3px 10px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  lose: {
+    color: "#dc2626",
+    background: "rgba(220,38,38,0.10)",
+    border: "1px solid rgba(220,38,38,0.25)",
+    padding: "3px 10px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  draw: {
+    color: "#6b7280",
+    background: "rgba(107,114,128,0.12)",
+    border: "1px solid rgba(107,114,128,0.22)",
+    padding: "3px 10px",
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  },
+};
