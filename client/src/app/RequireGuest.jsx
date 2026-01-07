@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { loadGuestUser, saveGuestUser } from "../lib/auth";
+import {
+  getCurrentUser,
+  loadGuestUser,
+  saveAuth,
+  saveGuestUser,
+} from "../lib/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
@@ -8,8 +13,8 @@ function apiUrl(path) {
   return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
-export default function RequireGuest() {
-  const [user, setUser] = useState(() => loadGuestUser());
+export default function RequireGuest({ onOpenLogin, onOpenRegister }) {
+  const [user, setUser] = useState(() => getCurrentUser());
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -42,10 +47,9 @@ export default function RequireGuest() {
       }
 
       const data = await res.json();
-      const saved = { id: String(data.id), nickname: data.nickname };
-
-      saveGuestUser(saved);
-      setUser(saved);
+      // data: { user, token }
+      saveAuth(data);
+      setUser(data.user);
     } catch (e) {
       console.error(e);
       setErr("서버 연결/요청에 실패했습니다. 서버가 켜져 있는지 확인해주세요");
@@ -57,7 +61,9 @@ export default function RequireGuest() {
   return (
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>닉네임 설정</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900 }}>
+          닉네임 설정
+        </h2>
         <p style={{ marginTop: 8, color: "#555", lineHeight: 1.4 }}>
           닉네임은 처음 한 번만 입력하면 됩니다. 나중에 마이페이지에서 바꿀 수도
           있습니다!
@@ -81,6 +87,27 @@ export default function RequireGuest() {
           {loading ? "생성 중..." : "시작하기"}
         </button>
 
+        {/* 추가: 회원가입/로그인 */}
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={onOpenRegister}
+            style={styles.outlineBtn}
+            disabled={loading}
+          >
+            회원가입
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenLogin}
+            style={styles.outlineBtn}
+            disabled={loading}
+          >
+            로그인
+          </button>
+        </div>
+
         <div style={{ marginTop: 10, fontSize: 12, color: "#777" }}>
           * 지금은 게스트 모드입니다.
         </div>
@@ -100,6 +127,7 @@ const styles = {
     zIndex: 9999,
     padding: 16,
   },
+
   modal: {
     width: "100%",
     maxWidth: 420,
@@ -108,6 +136,7 @@ const styles = {
     padding: 18,
     boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
   },
+
   input: {
     width: "100%",
     boxSizing: "border-box",
@@ -118,6 +147,7 @@ const styles = {
     fontSize: 16,
     marginTop: 10,
   },
+
   button: {
     width: "100%",
     marginTop: 12,
@@ -131,6 +161,17 @@ const styles = {
     cursor: "pointer",
     opacity: 1,
   },
+
+  outlineBtn: {
+    flex: 1,
+    padding: "10px 12px",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    background: "#fff",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+
   error: {
     marginTop: 10,
     color: "crimson",

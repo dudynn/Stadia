@@ -5,6 +5,7 @@ import userRouter from "./routes/users.js";
 import diariesRouter from "./routes/diaries.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import authRouter from "./routes/auth.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,6 +22,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // 라우터로만 운영 (중복 라우트 제거)
 app.use("/api/users", userRouter);
 app.use("/api/diaries", diariesRouter);
+app.use("/api/auth", authRouter);
 
 // DB 연결 확인
 app.get("/api/health", async (req, res) => {
