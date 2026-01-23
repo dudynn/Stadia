@@ -62,7 +62,7 @@ function buildCommentTree(list) {
   const sortRecursively = (arr) => {
     arr.sort(
       (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     arr.forEach((n) => sortRecursively(n.children));
   };
@@ -316,7 +316,7 @@ export default function DiaryDetailPage() {
     try {
       await deleteDiaryComment(id, commentId);
       setComments((prev) =>
-        prev.filter((x) => Number(x.id) !== Number(commentId))
+        prev.filter((x) => Number(x.id) !== Number(commentId)),
       );
 
       // 답글 입력창이 삭제된 댓글에 열려있으면 닫기
@@ -435,7 +435,7 @@ export default function DiaryDetailPage() {
             href={openMapLink(data.venue_name).naver}
             target="_blank"
             rel="noreferrer"
-            style={ui.linkBtn}
+            style={ui.linkBtnNaver}
           >
             📍 네이버지도
           </a>
@@ -443,7 +443,7 @@ export default function DiaryDetailPage() {
             href={openMapLink(data.venue_name).kakao}
             target="_blank"
             rel="noreferrer"
-            style={ui.linkBtn}
+            style={ui.linkBtnKakao}
           >
             📍 카카오맵
           </a>
@@ -451,7 +451,7 @@ export default function DiaryDetailPage() {
             href={openMapLink(data.venue_name).google}
             target="_blank"
             rel="noreferrer"
-            style={ui.linkBtn}
+            style={ui.linkBtnGoogle}
           >
             📍 구글맵
           </a>
@@ -593,6 +593,7 @@ const ui = {
   btnOutline: {
     padding: "10px 12px",
     borderRadius: 12,
+    marginTop: 20,
     border: "1px solid #e5e7eb",
     background: "#fff",
     cursor: "pointer",
@@ -651,13 +652,39 @@ const ui = {
     cursor: "pointer",
   },
 
-  linkBtn: {
+  linkBtnNaver: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    fontWeight: 900,
+    color: "#fff",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "#3bca56",
+  },
+
+  linkBtnKakao: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    fontWeight: 900,
+    color: "#4174ff",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "#f4e400",
+  },
+
+  linkBtnGoogle: {
     padding: "10px 12px",
     borderRadius: 12,
     border: "1px solid #e5e7eb",
     background: "#fff",
     fontWeight: 900,
-    color: "#111",
+    color: "#df3732",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",

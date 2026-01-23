@@ -204,7 +204,7 @@ export default function HomePage() {
     <PageContainer>
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <h1 style={{ marginTop: 15, fontSize: 20, flex: 1 }}>Stadia Diary</h1>
+        <h1 style={{ marginTop: 20, fontSize: 20, flex: 1 }}>Stadia Diary</h1>
 
         {/* 탭 느낌 (select 대신 버튼형) */}
         <div style={tabWrap}>

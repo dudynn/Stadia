@@ -278,7 +278,9 @@ export default function WritePage() {
 
   return (
     <PageContainer>
-      <h1 style={{ margin: 0 }}>{isEdit ? "기록 수정" : "기록 작성"}</h1>
+      <h1 style={{ margin: 0, marginTop: 20 }}>
+        {isEdit ? "기록 수정" : "기록 작성"}
+      </h1>
 
       <div style={ui.card}>
         <label style={ui.label}>공개 범위</label>
@@ -598,7 +600,7 @@ export default function WritePage() {
                       try {
                         await deleteDiaryPhoto(id, p.id);
                         setExistingPhotos((prev) =>
-                          prev.filter((x) => x.id !== p.id)
+                          prev.filter((x) => x.id !== p.id),
                         );
                       } catch (e) {
                         console.error(e);
@@ -638,7 +640,7 @@ export default function WritePage() {
             const remain = 3 - existingPhotos.length;
             if (remain <= 0) {
               alert(
-                "이미 사진이 3장 등록되어 있습니다. 먼저 삭제 후 추가하세요."
+                "이미 사진이 3장 등록되어 있습니다. 먼저 삭제 후 추가하세요.",
               );
               e.target.value = "";
               return;
@@ -646,7 +648,7 @@ export default function WritePage() {
 
             if (files.length > remain) {
               alert(
-                `현재 ${existingPhotos.length}장 등록됨. ${remain}장까지만 추가 가능!`
+                `현재 ${existingPhotos.length}장 등록됨. ${remain}장까지만 추가 가능!`,
               );
               e.target.value = "";
               return;

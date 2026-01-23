@@ -48,15 +48,15 @@ export default function MyPage() {
   }, []);
 
   const baseball = favorites.find(
-    (f) => f.sport === "baseball" && f.gender === "none"
+    (f) => f.sport === "baseball" && f.gender === "none",
   );
 
   const volleyballMen = favorites.find(
-    (f) => f.sport === "volleyball" && f.gender === "male"
+    (f) => f.sport === "volleyball" && f.gender === "male",
   );
 
   const volleyballWomen = favorites.find(
-    (f) => f.sport === "volleyball" && f.gender === "female"
+    (f) => f.sport === "volleyball" && f.gender === "female",
   );
 
   const onLogout = () => {
@@ -139,21 +139,13 @@ export default function MyPage() {
             게스트 닉네임 다시 설정하기
           </button>
         )}
-        {/* <button
-          onClick={() => {
-            clearGuestUser();
-            window.location.reload();
-          }}
-          style={resetBtn}
-        >
-          닉네임 다시 설정하기
-        </button> */}
       </div>
     </PageContainer>
   );
 }
 
 const profileCard = {
+  marginTop: 30,
   border: "1px solid #eee",
   borderRadius: 16,
   padding: 16,
