@@ -57,7 +57,7 @@ export default function WritePage() {
   const [sport, setSport] = useState("baseball");
 
   // 공개 범위
-  const [visibility, setVisibility] = useState("private"); // private | public
+  const [visibility, setVisibility] = useState("public"); // private | public
 
   // 야구
   const [baseballHome, setBaseballHome] = useState(BASEBALL_TEAMS[0]);

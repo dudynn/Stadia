@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import authRouter from "./routes/auth.js";
 import { pool } from "./db.js";
 import userRouter from "./routes/users.js";
 import diariesRouter from "./routes/diaries.js";
-import path from "path";
 import { fileURLToPath } from "url";
-import authRouter from "./routes/auth.js";
+import "dotenv/config";
 
 const app = express();
 const PORT = process.env.PORT || 4000;

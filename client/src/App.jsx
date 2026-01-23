@@ -7,6 +7,8 @@ import MyPage from "./pages/MyPage.jsx";
 import FavoritePage from "./pages/FavoritePage.jsx";
 import DiaryDetailPage from "./pages/DiaryDetailPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
 
 export default function App() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
 
         {/* +) /home 같은 경로로 왔을 때 /로 보내기 */}
         <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />

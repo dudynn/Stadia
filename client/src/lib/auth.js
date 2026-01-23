@@ -1,13 +1,6 @@
 const LS_KEY = "stadia_user_v1";
 
-/**
- * 저장 형태 (권장)
- * {
- *   user: { id: "4", nickname: "철수", mode: "guest" | "account" },
- *   token: "jwt..." // 게스트든 계정이든 내려주면 저장
- * }
- */
-
+// { user: {id, nickname, email?, mode}, token }
 export function loadAuth() {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -27,6 +20,11 @@ export function clearAuth() {
 
 export function getCurrentUser() {
   return loadAuth()?.user ?? null;
+}
+
+export function getCurrentUserId() {
+  const u = getCurrentUser();
+  return u?.id ?? null;
 }
 
 export function getToken() {

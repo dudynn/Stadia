@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "../components/PageContainer.jsx";
 
@@ -23,7 +23,6 @@ function formatDate(dateLike) {
   return `${yyyy}.${mm}.${dd}`;
 }
 
-// 지도 섹션 대신 링크 대체
 function openMapLink(place) {
   const q = encodeURIComponent(place || "");
   return {
@@ -31,6 +30,150 @@ function openMapLink(place) {
     naver: `https://map.naver.com/v5/search/${q}`,
     google: `https://www.google.com/maps/search/?api=1&query=${q}`,
   };
+}
+
+// flat -> tree
+function buildCommentTree(list) {
+  const map = new Map();
+  const roots = [];
+
+  list.forEach((c) => {
+    map.set(Number(c.id), {
+      ...c,
+      id: Number(c.id),
+      user_id: Number(c.user_id),
+      parent_comment_id:
+        c.parent_comment_id == null ? null : Number(c.parent_comment_id),
+      children: [],
+    });
+  });
+
+  map.forEach((node) => {
+    if (node.parent_comment_id) {
+      const parent = map.get(node.parent_comment_id);
+      if (parent) parent.children.push(node);
+      else roots.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  // 정렬(원하면 바꿔도 됨): 오래된 순
+  const sortRecursively = (arr) => {
+    arr.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    arr.forEach((n) => sortRecursively(n.children));
+  };
+  sortRecursively(roots);
+
+  return roots;
+}
+
+function CommentNode({
+  node,
+  depth,
+  replyTo,
+  replyText,
+  setReplyTo,
+  setReplyText,
+  submitComment,
+  myUserId,
+  onDeleteComment,
+}) {
+  const isMine = myUserId && Number(node.user_id) === Number(myUserId);
+
+  return (
+    <div style={{ marginLeft: depth * 16 }}>
+      <div style={ui.commentCard}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontWeight: 900 }}>{node.nickname ?? "unknown"}</div>
+          <div style={{ fontSize: 12, color: "#777", fontWeight: 700 }}>
+            {new Date(node.created_at).toLocaleString()}
+          </div>
+
+          {isMine && (
+            <button
+              type="button"
+              onClick={() => onDeleteComment(node.id)}
+              style={ui.btnGhostDanger}
+            >
+              삭제
+            </button>
+          )}
+        </div>
+
+        <div style={{ marginTop: 6, fontWeight: 700 }}>{node.content}</div>
+
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            style={ui.replyBtn}
+            onClick={() => {
+              setReplyTo(node.id);
+              setReplyText("");
+            }}
+          >
+            답글
+          </button>
+
+          {replyTo === node.id && (
+            <button
+              type="button"
+              style={ui.replyBtn}
+              onClick={() => {
+                setReplyTo(null);
+                setReplyText("");
+              }}
+            >
+              취소
+            </button>
+          )}
+        </div>
+
+        {replyTo === node.id && (
+          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <input
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="답글을 입력하세요 (최대 300자)"
+              style={ui.input}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitComment({ parentId: node.id });
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => submitComment({ parentId: node.id })}
+              style={ui.primaryBtn(false)}
+            >
+              등록
+            </button>
+          </div>
+        )}
+      </div>
+
+      {node.children?.length > 0 && (
+        <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+          {node.children.map((child) => (
+            <CommentNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              replyTo={replyTo}
+              replyText={replyText}
+              setReplyTo={setReplyTo}
+              setReplyText={setReplyText}
+              submitComment={submitComment}
+              myUserId={myUserId}
+              onDeleteComment={onDeleteComment}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DiaryDetailPage() {
@@ -55,9 +198,14 @@ export default function DiaryDetailPage() {
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
 
+  // reply state (하나만 열리게)
+  const [replyTo, setReplyTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+
+  const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
+
   useEffect(() => {
     let alive = true;
-
     (async () => {
       try {
         setLoading(true);
@@ -71,7 +219,6 @@ export default function DiaryDetailPage() {
         if (alive) setLoading(false);
       }
     })();
-
     return () => {
       alive = false;
     };
@@ -79,14 +226,12 @@ export default function DiaryDetailPage() {
 
   useEffect(() => {
     if (!viewerOpen) return;
-
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
         setViewerOpen(false);
         setViewerSrc("");
       }
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [viewerOpen]);
@@ -138,7 +283,54 @@ export default function DiaryDetailPage() {
     };
   }, [id]);
 
-  const onDelete = async () => {
+  const submitComment = async ({ parentId = null } = {}) => {
+    const text = (parentId ? replyText : commentText).trim();
+    if (!text) return;
+    if (text.length > 300) return alert("댓글은 300자 이하입니다.");
+
+    setCommentLoading(true);
+    try {
+      // ✅ parentId 전달
+      const created = await createDiaryComment(id, text, parentId);
+
+      setComments((prev) => [...prev, created]);
+
+      if (parentId) {
+        setReplyText("");
+        setReplyTo(null);
+      } else {
+        setCommentText("");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("댓글 작성 실패");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const onDeleteComment = async (commentId) => {
+    const ok = window.confirm("이 댓글을 삭제할까요?");
+    if (!ok) return;
+
+    try {
+      await deleteDiaryComment(id, commentId);
+      setComments((prev) =>
+        prev.filter((x) => Number(x.id) !== Number(commentId))
+      );
+
+      // 답글 입력창이 삭제된 댓글에 열려있으면 닫기
+      if (Number(replyTo) === Number(commentId)) {
+        setReplyTo(null);
+        setReplyText("");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("댓글 삭제 실패");
+    }
+  };
+
+  const onDeleteDiary = async () => {
     const ok = window.confirm("이 기록을 삭제할까요?");
     if (!ok) return;
 
@@ -238,49 +430,28 @@ export default function DiaryDetailPage() {
       {/* 장소 링크 */}
       <div style={{ marginTop: 14 }}>
         <div style={{ fontWeight: 900, marginBottom: 8 }}>장소</div>
-
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <a
             href={openMapLink(data.venue_name).naver}
             target="_blank"
             rel="noreferrer"
             style={ui.linkBtn}
-            onMouseEnter={(e) =>
-              Object.assign(e.currentTarget.style, mapHover.naver)
-            }
-            onMouseLeave={(e) =>
-              Object.assign(e.currentTarget.style, ui.linkBtn)
-            }
           >
             📍 네이버지도
           </a>
-
           <a
             href={openMapLink(data.venue_name).kakao}
             target="_blank"
             rel="noreferrer"
             style={ui.linkBtn}
-            onMouseEnter={(e) =>
-              Object.assign(e.currentTarget.style, mapHover.kakao)
-            }
-            onMouseLeave={(e) =>
-              Object.assign(e.currentTarget.style, ui.linkBtn)
-            }
           >
             📍 카카오맵
           </a>
-
           <a
             href={openMapLink(data.venue_name).google}
             target="_blank"
             rel="noreferrer"
             style={ui.linkBtn}
-            onMouseEnter={(e) =>
-              Object.assign(e.currentTarget.style, mapHover.google)
-            }
-            onMouseLeave={(e) =>
-              Object.assign(e.currentTarget.style, ui.linkBtn)
-            }
           >
             📍 구글맵
           </a>
@@ -320,7 +491,7 @@ export default function DiaryDetailPage() {
 
       <div style={{ marginTop: 18 }}>
         <button
-          onClick={onDelete}
+          onClick={onDeleteDiary}
           disabled={deleting}
           style={ui.btnDanger(deleting)}
         >
@@ -334,6 +505,7 @@ export default function DiaryDetailPage() {
           댓글 {comments.length}
         </div>
 
+        {/* 최상위 댓글 입력 */}
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={commentText}
@@ -344,67 +516,39 @@ export default function DiaryDetailPage() {
           <button
             type="button"
             disabled={commentLoading}
-            onClick={async () => {
-              const text = commentText.trim();
-              if (!text) return;
-              if (text.length > 300) return alert("댓글은 300자 이하입니다.");
-
-              setCommentLoading(true);
-              try {
-                const created = await createDiaryComment(id, text);
-                setComments((prev) => [...prev, created]);
-                setCommentText("");
-              } catch (e) {
-                console.error(e);
-                alert("댓글 작성 실패");
-              } finally {
-                setCommentLoading(false);
-              }
-            }}
+            onClick={() => submitComment()}
             style={ui.primaryBtn(commentLoading)}
           >
-            {commentLoading ? "등록중" : "등록"}
+            {commentLoading ? "등록 중" : "등록"}
           </button>
         </div>
 
+        {/* 트리 렌더 */}
         <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-          {comments.map((c) => (
-            <div key={c.id} style={ui.commentCard}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontWeight: 900 }}>{c.nickname ?? "unknown"}</div>
-                <div style={{ fontSize: 12, color: "#777", fontWeight: 700 }}>
-                  {new Date(c.created_at).toLocaleString()}
-                </div>
-
-                {myUserId && Number(c.user_id) === Number(myUserId) && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const ok = window.confirm("이 댓글을 삭제할까요?");
-                      if (!ok) return;
-                      try {
-                        await deleteDiaryComment(id, c.id);
-                        setComments((prev) =>
-                          prev.filter((x) => x.id !== c.id)
-                        );
-                      } catch (e) {
-                        console.error(e);
-                        alert("댓글 삭제 실패");
-                      }
-                    }}
-                    style={ui.btnGhostDanger}
-                  >
-                    삭제
-                  </button>
-                )}
-              </div>
-
-              <div style={{ marginTop: 6, fontWeight: 700 }}>{c.content}</div>
+          {commentTree.length === 0 ? (
+            <div style={{ color: "#666", fontWeight: 700 }}>
+              아직 댓글이 없어요. 첫 댓글을 남겨보세요!
             </div>
-          ))}
+          ) : (
+            commentTree.map((node) => (
+              <CommentNode
+                key={node.id}
+                node={node}
+                depth={0}
+                replyTo={replyTo}
+                replyText={replyText}
+                setReplyTo={setReplyTo}
+                setReplyText={setReplyText}
+                submitComment={submitComment}
+                myUserId={myUserId}
+                onDeleteComment={onDeleteComment}
+              />
+            ))
+          )}
         </div>
       </div>
 
+      {/* 사진 뷰어 */}
       {viewerOpen && (
         <div
           onClick={() => {
@@ -419,7 +563,6 @@ export default function DiaryDetailPage() {
             onClick={(e) => e.stopPropagation()}
             style={ui.viewerImage}
           />
-
           <button
             type="button"
             onClick={(e) => {
@@ -550,6 +693,17 @@ const ui = {
     background: "#fff",
   },
 
+  replyBtn: {
+    border: "1px solid #e5e7eb",
+    background: "#fff",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontWeight: 900,
+    cursor: "pointer",
+    color: "#111",
+    fontSize: 12,
+  },
+
   resultPill: (r) => ({
     display: "inline-flex",
     alignItems: "center",
@@ -615,23 +769,5 @@ const resultChip = {
     color: "#6b7280",
     background: "rgba(107,114,128,0.12)",
     border: "1px solid rgba(107,114,128,0.22)",
-  },
-};
-
-const mapHover = {
-  kakao: {
-    background: "#fee500",
-    border: "1px solid #fee500",
-    color: "#000",
-  },
-  naver: {
-    background: "#03c75a",
-    border: "1px solid #03c75a",
-    color: "#fff",
-  },
-  google: {
-    background: "#f29900",
-    border: "1px solid #f29900",
-    color: "#fff",
   },
 };

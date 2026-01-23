@@ -1,10 +1,42 @@
-import { getGuestUserId } from "./auth.js";
+import { getGuestUserId, getToken } from "./auth.js";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
 function apiUrl(path) {
   if (!API_BASE) throw new Error("VITE_API_URL is not set");
   return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+function authHeaders(extra = {}) {
+  const token = getToken();
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+export async function registerUser({ email, password, nickname }) {
+  const res = await fetch(apiUrl("/api/auth/register"), {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ email, password, nickname }),
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || "register failed");
+  return JSON.parse(text);
+}
+
+export async function loginUser({ email, password }) {
+  const res = await fetch(apiUrl("/api/auth/login"), {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ email, password }),
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || "login failed");
+  return JSON.parse(text);
 }
 
 export async function fetchMyFavorites() {
@@ -189,14 +221,18 @@ export async function fetchDiaryComments(diaryId) {
   return res.json();
 }
 
-export async function createDiaryComment(diaryId, content) {
+export async function createDiaryComment(diaryId, content, parentId = null) {
   const userId = getGuestUserId();
   if (!userId) throw new Error("no user");
 
   const res = await fetch(apiUrl(`/api/diaries/${diaryId}/comments`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, content }),
+    body: JSON.stringify({
+      user_id: userId,
+      content,
+      parent_comment_id: parentId,
+    }),
   });
 
   if (!res.ok) {

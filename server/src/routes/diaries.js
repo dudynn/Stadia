@@ -266,6 +266,7 @@ router.get("/", async (req, res) => {
 //     return res.status(500).json({ message: "internal server error" });
 //   }
 // });
+
 /**
  * GET /api/diaries/:id?userId=123
  * 상세 + nickname + like_count + my_liked + photos 같이 내려주기
@@ -390,7 +391,8 @@ router.get("/:id/comments", async (req, res) => {
         c.user_id,
         u.nickname,
         c.content,
-        c.created_at
+        c.created_at,
+        c.parent_comment_id
       FROM comments c
       JOIN users u ON u.id = c.user_id
       WHERE c.diary_id = $1
@@ -415,6 +417,11 @@ router.post("/:id/comments", async (req, res) => {
     const diaryId = Number(req.params.id);
     const userId = Number(req.body.user_id);
     const content = String(req.body.content ?? "").trim();
+    const parentCommentId =
+      req.body.parent_comment_id == null
+        ? null
+        : Number(req.body.parent_comment_id);
+    const parentId = req.body.parent_comment_id ?? null;
 
     if (!diaryId || !userId) {
       return res.status(400).json({ message: "invalid id" });
@@ -423,13 +430,25 @@ router.post("/:id/comments", async (req, res) => {
     if (content.length > 300)
       return res.status(400).json({ message: "content too long (<=300)" });
 
+    // parent가 있으면 "같은 diary의 댓글"인지 검증 (중요함)
+    if (parentCommentId) {
+      const check = await pool.query(
+        "SELECT 1 FROM comments WHERE id=$1 AND diary_id=$2",
+        [parentCommentId, diaryId]
+      );
+
+      if (check.rowCount === 0) {
+        return res.status(400).json({ message: "invalid parent_comment_id" });
+      }
+    }
+
     const { rows } = await pool.query(
       `
-      INSERT INTO comments (diary_id, user_id, content)
-      VALUES ($1, $2, $3)
-      RETURNING id, diary_id, user_id, content, created_at
+      INSERT INTO comments (diary_id, user_id, content, parent_comment_id)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, diary_id, user_id, content, parent_comment_id, created_at
       `,
-      [diaryId, userId, content]
+      [diaryId, userId, content, parentCommentId]
     );
 
     // nickname 포함해서 내려주기

@@ -171,7 +171,7 @@ export default function HomePage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [feed, setFeed] = useState("mine"); // "mine" | "public"
+  const [feed, setFeed] = useState("public"); // "mine" | "public"
 
   useEffect(() => {
     let alive = true;

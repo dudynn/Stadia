@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import RequireGuest from "./RequireGuest";
 
 const linkStyle = ({ isActive }) => ({
@@ -12,11 +12,22 @@ const linkStyle = ({ isActive }) => ({
 
 export default function AppShell() {
   const location = useLocation();
-  const isWrite = location.pathname === "/write";
+  const nav = useNavigate();
+
+  const isWrite = location.pathname.startsWith("/write");
+
+  const hideGuestModal =
+    location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/register");
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff" }}>
-      <RequireGuest />
+      {!hideGuestModal && (
+        <RequireGuest
+          onOpenLogin={() => nav("/login")}
+          onOpenRegister={() => nav("register")}
+        />
+      )}
 
       {/* 본문 */}
       <div style={{ paddingBottom: 78 }}>
