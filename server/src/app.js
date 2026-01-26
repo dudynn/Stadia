@@ -14,7 +14,24 @@ const PORT = process.env.PORT || 4000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors());
+// CORS: 로컬 + 배포 프론트만 허용
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // origin이 없는 경우(예: curl, 서버-서버 요청) 허용
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json());
 
 // uploads 폴더 정적 서빙 (URL: /uploads/파일명)
@@ -26,7 +43,7 @@ app.use("/api/diaries", diariesRouter);
 app.use("/api/auth", authRouter);
 
 // DB 연결 확인
-app.get("/api/health", async (req, res) => {
+app.get("/api/health", async (req, res, next) => {
   try {
     const result = await pool.query("SELECT now() as now");
     res.json({ ok: true, now: result.rows[0].now });
