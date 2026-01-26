@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 4000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS: 로컬 + 배포 프론트만 허용
+// (배포 전) CORS: 로컬 + 배포 프론트만 허용!
 const allowedOrigins = [
   "http://localhost:5173",
   process.env.FRONTEND_URL,
